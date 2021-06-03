@@ -14,9 +14,13 @@ car_cost = Dict(
     ("bmw", 2002) => 300
     )
 
-indices = [k for k in keys(car_cost)]
 
-y = JuMPUtils.create_variables(m, 2, "y", keys(car_cost))
+y = create_variable(m, 2, "y", keys(car_cost))
+
+z = create_variable(m, 2, "z")
+for c in ["opel", "tesla", "nikola"]
+    add_index(m, z, c, 2002)
+end
 
 @constraint(m, sum(y[c,i] for c in cars, i in year) <= 300)
 
@@ -27,3 +31,4 @@ end
 
 
 
+ 

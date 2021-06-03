@@ -1,35 +1,38 @@
-struct SparseDict{N,T}
-    
-    tupledict::Dict{NTuple{N,Any},T}
+struct SparseDictArray{N,T}
 
-    function SparseDict{N,T}() where {N,T} 
+    name::String
+    
+    data::Dict{NTuple{N,Any},T}
+
+    function SparseDictArray{N,T}(name::String) where {N,T} 
         dict = Dict{NTuple{N,Any},T}()
-        return new{N,T}(dict)
+        return new{N,T}(name, dict)
     end
 end
 
-function Base.getindex(tl::SparseDict, inds...) 
-    if length(inds) == 1 && isa(inds[1], Tuple)
-        return get(tl.tupledict, inds[1], 0) 
-    end
-    return get(tl.tupledict, inds, 0)
+function Base.getindex(sd::SparseDictArray{N,T}, idx::NTuple{N,Any}) where {N,T} 
+    return getindex(sd,idx...)
 end
 
-function Base.setindex!(tl::SparseDict, val, inds...) 
-    
-    if length(inds) == 1 && isa(inds[1], Tuple)
-        tl.tupledict[inds[1]] = val
-        return
-    end
-    tl.tupledict[inds] = val
-    return
+function Base.getindex(sd::SparseDictArray{N,T}, idx...) where {N,T} 
+    length(idx) < N && throw(BoundsError(sd, idx))
+    return get(sd.data, idx, 0)
 end
 
-function select(td::SparseDict, pattern...)
+function Base.setindex!(sd::SparseDictArray{N,T}, val, idx::NTuple{N,Any}) where {N,T}
+    return setindex!(sd.data, val, idx...)
+end
+
+function Base.setindex!(sd::SparseDictArray{N,T}, val, idx...) where {N,T}
+    length(idx) < N && throw(BoundsError(sd, idx))
+    return setindex!(sd.data, val, idx)
+end
+
+function select(sd::SparseDictArray, pattern...)
     # Return all tuple indices that satfies pattern
     matches = []
     
-    for t in keys(td.tupledict)
+    for t in keys(sd.data)
         match = true
         for (index,val) in enumerate(pattern)
             if val != :* && val != t[index]
