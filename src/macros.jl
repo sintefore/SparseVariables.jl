@@ -16,7 +16,7 @@ macro sparsevariable(m,ex)
         dim = length(idx)
       
         return quote
-            var = $(esc(m))[Symbol($vname)] = SparseVarArray{$dim}($(esc(m)), $vname)
+            $(esc(v)) = $(esc(m))[Symbol($vname)] = SparseVarArray{$dim}($(esc(m)), $vname)
         end    
     end
 
@@ -30,10 +30,9 @@ macro sparsevariable(m,ex)
     i = itr.args[1]
     I = itr.args[2]
     return quote
-        var = $(esc(m))[Symbol($vname)] = SparseVarArray{$dim}($(esc(m)), $vname)
+        $(esc(v)) = $(esc(m))[Symbol($vname)] = SparseVarArray{$dim}($(esc(m)), $vname)
         for $i in $(esc(I))
-            insertvar!(var,$i...)
+            insertvar!($(esc(v)),$i...)
         end
-        var
     end
 end

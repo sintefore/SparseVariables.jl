@@ -15,10 +15,10 @@ car_cost = Dict(
     )
 
 # Variable defined for a given set of tuples
-y = @sparsevariable(m, y[c,i] for (c,i) in keys(car_cost))
+@sparsevariable(m, y[c,i] for (c,i) in keys(car_cost))
 
 # Empty variable with 2 indices
-z = @sparsevariable(m, z[c,i])
+@sparsevariable(m, z[c,i])
 
 
 for c in ["opel", "tesla", "nikola"]
