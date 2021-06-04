@@ -15,14 +15,14 @@ car_cost = Dict(
     )
 
 # Variable defined for a given set of tuples
-y = JuMPUtils.@sparsevariable(m, y[c,i] for (c,i) in keys(car_cost))
+y = @sparsevariable(m, y[c,i] for (c,i) in keys(car_cost))
 
 # Empty variable with 2 indices
-z = JuMPUtils.@sparsevariable(m, z[c,i])
+z = @sparsevariable(m, z[c,i])
 
 
 for c in ["opel", "tesla", "nikola"]
-    JuMPUtils.insert!(z, c, 2002)
+    insertvar!(z, c, 2002)
 end
 
 # Inefficient iteration, but 0 contribution for non-existing variables

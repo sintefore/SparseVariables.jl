@@ -32,7 +32,7 @@ macro sparsevariable(m,ex)
     return quote
         var = $(esc(m))[Symbol($vname)] = SparseVarArray{$dim}($(esc(m)), $vname)
         for $i in $(esc(I))
-            insert!(var,$i...)
+            insertvar!(var,$i...)
         end
         var
     end
