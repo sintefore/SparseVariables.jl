@@ -14,15 +14,19 @@ car_cost = Dict(
     ("bmw", 2002) => 300
     )
 
+# Variable defined for a given set of tuples
+y = JuMPUtils.@sparsevariable(m, y[c,i] for (c,i) in keys(car_cost))
 
-y = create_variable(m, 2, "y", keys(car_cost))
+# Empty variable with 2 indices
+z = JuMPUtils.@sparsevariable(m, z[c,i])
 
-z = create_variable(m, 2, "z")
+
 for c in ["opel", "tesla", "nikola"]
-    add_index(m, z, c, 2002)
+    JuMPUtils.insert!(z, c, 2002)
 end
 
-@constraint(m, sum(y[c,i] for c in cars, i in year) <= 300)
+# Inefficient iteration, but 0 contribution for non-existing variables
+@constraint(m, sum(y[c,i] + z[c,i] for c in cars, i in year) <= 300)
 
 for ii in year
     @constraint(m, sum(y[c,i] for (c,i) in JuMPUtils.select(y, :*, ii)) <= 1)
