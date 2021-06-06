@@ -1,85 +1,30 @@
-struct SparseDictArray{T,N} # <: AbstractArray{T,N}
 
-    data::Dict{NTuple{N,Any},T}
+abstract type AbstractSparseArray{T,N} <: AbstractArray{T,N} end
 
-    function SparseDictArray{T,N}() where {T,N} 
-        dict = Dict{NTuple{N,Any},T}()
-        return new{T,N}(dict)
-    end
+function Base.getindex(sa::AbstractSparseArray{T,N}, idx::NTuple{N,Any}) where {T,N} 
+    return getindex(sa,idx...)
 end
 
-function Base.getindex(sd::SparseDictArray{T,N}, idx::NTuple{N,Any}) where {T,N} 
-    return getindex(sd,idx...)
+function Base.getindex(sa::AbstractSparseArray{T,N}, idx...) where {T,N} 
+    length(idx) < N && throw(BoundsError(sa, idx))
+    return get(_data(sa), idx, zero(T))
 end
 
-function Base.getindex(sd::SparseDictArray{T,N}, idx...) where {T,N} 
-    length(idx) < N && throw(BoundsError(sd, idx))
-    return get(sd.data, idx, 0)
+function Base.setindex!(sa::AbstractSparseArray{T,N}, val, idx::NTuple{N,Any}) where {T,N}
+    return set!(_data(sa), idx, val)
 end
 
-function Base.setindex!(sd::SparseDictArray{T,N}, val, idx::NTuple{N,Any}) where {T,N}
-    return setindex!(sd.data, val, idx...)
+function Base.setindex!(sa::AbstractSparseArray{T,N}, val, idx...) where {T,N}
+    length(idx) < N && throw(BoundsError(sa, idx))
+    return set!(_data(sa), idx, val)
 end
 
-function Base.setindex!(sd::SparseDictArray{T,N}, val, idx...) where {T,N}
-    length(idx) < N && throw(BoundsError(sd, idx))
-    return setindex!(sd.data, val, idx)
-end
+Base.length(sa::AbstractSparseArray) = length(_data(sa)) 
 
-struct SparseVarArray{N} #<: AbstractArray{VariableRef,N}
-   
-    model::Model
+Base.keys(sa::AbstractSparseArray) = keys(_data(sa))
 
-    name::String 
-    
-    data::Dict{NTuple{N,Any},VariableRef}
-
-    function SparseVarArray{N}(model::Model,name::String) where {N} 
-        dict = Dict{NTuple{N,Any},VariableRef}()
-        return new{N}(model, name, dict)
-    end
-end
-
-function Base.getindex(sd::SparseVarArray{N}, idx::NTuple{N,Any}) where {N} 
-    return getindex(sd,idx...)
-end
-
-function Base.getindex(sd::SparseVarArray{N}, idx...) where {N} 
-    length(idx) < N && throw(BoundsError(sd, idx))
-    return get(sd.data, idx, 0)
-end
-
-function Base.setindex!(sd::SparseVarArray{N}, val, idx::NTuple{N,Any}) where {N}
-    return setindex!(sd.data, val, idx...)
-end
-
-function Base.setindex!(sd::SparseVarArray{N}, val, idx...) where {N}
-    length(idx) < N && throw(BoundsError(sd, idx))
-    return setindex!(sd.data, val, idx)
-end
-
-function select(sd::SparseVarArray, pattern...)
-    # Return all tuple indices that satfies pattern
-    matches = []
-    
-    for t in keys(sd.data)
-        match = true
-        for (index,val) in enumerate(pattern)
-            if val != :* && val != t[index]
-                match = false
-                break
-            end
-        end
-        if match 
-            push!(matches, t)
-        end
-    end
-
-    return matches
-end
-
-function Base.summary(io::IO, sa::SparseVarArray)
-    num_entries = length(sa.data)
+function Base.summary(io::IO, sa::AbstractSparseArray)
+    num_entries = length(sa)
     return print(
         io,
         typeof(sa),
@@ -88,6 +33,51 @@ function Base.summary(io::IO, sa::SparseVarArray)
         isone(num_entries) ? " entry" : " entries",
     )
 end
-function Base.show(io::IO, ::MIME"text/plain", sa::SparseVarArray)
+function Base.show(io::IO, ::MIME"text/plain", sa::AbstractSparseArray)
     summary(io, sa)
+    if !iszero(length(_data(sa)))
+        println(io, ":")
+        show(io, sa)
+    end
+end
+Base.show(io::IO, sa::AbstractSparseArray) = show(_data(sa))
+
+
+function select(sa::AbstractSparseArray{T,N}, pattern::NTuple{N,Any}) where {T,N}
+    select(keys(_data(sa)), pattern)
+end
+
+function select(sa::AbstractSparseArray{T,N}, pattern...) where {T,N} 
+    length(pattern) < N && throw(BoundsError(sa, idx))
+    select(keys(_data(sa)), pattern)
+end
+
+struct SparseArray{T,N, K <: NTuple{N,Any} } <: AbstractSparseArray{T,N}
+
+    data::Dictionary{K,T}
+end
+
+function SparseArray(d::Dict{K,T})  where {T,N,K <: NTuple{N,Any}}
+    return SparseArray{T,N,K}(Dictionary(d))
+end
+
+_data(sa::SparseArray) = sa.data
+
+struct SparseVarArray{N} <: AbstractSparseArray{VariableRef,N} 
+   
+    model::Model
+    name::String 
+    data::Dictionary{NTuple{N,Any},VariableRef}
+
+    function SparseVarArray{N}(model::Model,name::String) where {N} 
+        dict = Dictionary{NTuple{N,Any},VariableRef}()
+        return new{N}(model, name, dict)
+    end
+end
+
+_data(sa::SparseVarArray) = sa.data
+
+function insertvar!(var::SparseVarArray{N}, index...) where {N} 
+    var[index] = @variable(var.model, lower_bound=0)
+    set_name(var[index], variable_name(var.name,index))
 end
