@@ -48,17 +48,24 @@ function select(sa::AbstractSparseArray{T,N}, pattern::NTuple{N,Any}) where {T,N
 end
 
 function select(sa::AbstractSparseArray{T,N}, pattern...) where {T,N} 
-    length(pattern) < N && throw(BoundsError(sa, idx))
+    length(pattern) < N && throw(BoundsError(sa, pattern))
     select(keys(_data(sa)), pattern)
 end
 
 struct SparseArray{T,N, K <: NTuple{N,Any} } <: AbstractSparseArray{T,N}
-
     data::Dictionary{K,T}
 end
 
-function SparseArray(d::Dict{K,T})  where {T,N,K <: NTuple{N,Any}}
+function SparseArray(d::Dict{K,T}) where {T,N,K <: NTuple{N,Any}}
     return SparseArray{T,N,K}(Dictionary(d))
+end
+
+function SparseArray{T,N}() where {T,N}
+    return SparseArray{T,N,NTuple{N,Any}}(Dictionary{NTuple{N,Any},T}())
+end
+
+function SparseArray{T,N,K}() where {T,N,K <: NTuple{N,Any}}
+    return SparseArray{T,N,K}(Dictionary{K,T}())
 end
 
 _data(sa::SparseArray) = sa.data
