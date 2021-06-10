@@ -9,7 +9,7 @@ include("dictionaries.jl")
 
 export @sparsevariable
 export insertvar!
-export ⭐
+export ⋆
 
 
 end # module

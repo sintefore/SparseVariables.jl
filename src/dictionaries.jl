@@ -54,18 +54,19 @@ make_filter_fun(c::Base.Fix2, pos) = x->c(x[pos])
 make_filter_fun(c::Function, pos) = x->c(x[pos])
 
 """
-    ⭐(x)
+    ⋆(x)
 Returns true. To be used as shorthand for wildcard function in patterns for select/filtering.
 
-TODO: Better character to use for wildcard? (*,∀,? and ¿ are reserved)
+The most obvious choices are reserved characters (*,∀,? and ¿). To use a different character, 
+simply define a new function to add it, e.g.: `∎(x) = true`
 
 # Example
 ```
 data = [("bmw",1929,"black")]
-select(data, (⭐,⭐,⭐)) == data # true
+select(data, (⋆,⋆,⋆)) == data # true
 ```
 """
-⭐(x) = true
+⋆(x) = true
 
 # Using function is faster, suggest to disable:
 # function make_filter_fun(c)
