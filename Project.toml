@@ -1,6 +1,6 @@
 name = "JuMPUtils"
 uuid = "2b8dd34a-38a9-4167-b666-ba0c47c9bf33"
-authors = ["Truls Flatberg <Truls.Flatberg@sintef.no>"]
+authors = ["Truls Flatberg <Truls.Flatberg@sintef.no>", "Lars Hellemo <Lars.Hellemo@sintef.no>"]
 version = "0.1.0"
 
 [deps]
