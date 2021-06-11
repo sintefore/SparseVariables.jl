@@ -2,12 +2,12 @@
 abstract type AbstractSparseArray{T,N} <: AbstractArray{T,N} end
 
 function Base.getindex(sa::AbstractSparseArray{T,N}, idx::NTuple{N,Any}) where {T,N} 
-    return getindex(sa,idx...)
+    return get(_data(sa), idx, zero(T))
 end
 
 function Base.getindex(sa::AbstractSparseArray{T,N}, idx...) where {T,N} 
-    length(idx) < N && throw(BoundsError(sa, idx))
-    return get(_data(sa), idx, zero(T))
+    length(idx) != N && throw(BoundsError(sa, idx))
+    return getindex(sa, idx)
 end
 
 function Base.setindex!(sa::AbstractSparseArray{T,N}, val, idx::NTuple{N,Any}) where {T,N}
@@ -15,8 +15,8 @@ function Base.setindex!(sa::AbstractSparseArray{T,N}, val, idx::NTuple{N,Any}) w
 end
 
 function Base.setindex!(sa::AbstractSparseArray{T,N}, val, idx...) where {T,N}
-    length(idx) < N && throw(BoundsError(sa, idx))
-    return set!(_data(sa), idx, val)
+    length(idx) != N && throw(BoundsError(sa, idx))
+    return setindex!(sa, val, idx)
 end
 
 Base.length(sa::AbstractSparseArray) = length(_data(sa)) 
@@ -44,12 +44,12 @@ Base.show(io::IO, sa::AbstractSparseArray) = show(_data(sa))
 
 
 function select(sa::AbstractSparseArray{T,N}, pattern::NTuple{N,Any}) where {T,N}
-    select(keys(_data(sa)), pattern)
+    select(keys(sa), pattern)
 end
 
 function select(sa::AbstractSparseArray{T,N}, pattern...) where {T,N} 
-    length(pattern) < N && throw(BoundsError(sa, pattern))
-    select(keys(_data(sa)), pattern)
+    length(pattern) != N && throw(BoundsError(sa, pattern))
+    select(keys(sa), pattern)
 end
 
 struct SparseArray{T,N, K <: NTuple{N,Any} } <: AbstractSparseArray{T,N}
