@@ -213,5 +213,28 @@ Return subset of `dict` matching selection defined by indices
 """
 select(dict, indices) = _select_gen(dict, indices)
 select(dict, indices, permutation) = _select_gen_perm(dict, indices, permutation)
+function select(dict, sh_pat::NamedTuple, names)
+    pat, perm = expand_shorthand(sh_pat, names)
+    select(dict, pat, perm)
+end
 select(dict::Dictionary, indices) = getindices(dict, select(keys(dict), indices))
 select(dict, f::Function) = filter(f, dict)
+
+function permfromnames(names::NamedTuple, patnames)
+    perm = (names[i] for i in patnames)
+    rest = setdiff((1:length(names)),perm)
+    return (perm...,rest...)
+end
+
+function expand_shorthand(sh_pat, names)
+    pat = []
+    for n in propertynames(names)
+        if haskey(sh_pat, n)
+            push!(pat, sh_pat[n])
+        else
+            push!(pat, x->true)
+        end
+    end
+    perm = permfromnames(names, propertynames(sh_pat))
+    return tuple(pat...), perm
+end

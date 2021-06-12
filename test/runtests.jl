@@ -16,6 +16,10 @@ push!(indices, lotus)
     @test JU.select(indices, (⋆, 1957)) == [lotus]
     @test JU.select(indices, (⋆, <(2000) )) == [lotus]
     @test JU.select(indices, (⋆, <(2000)), (2,1)) == [lotus]
+    ntnames = (car=1, year=2)
+    @test JU.select(indices, (;car="lotus"), ntnames) == [lotus]
+    @test JU.select(indices, (;year=1957), ntnames) == [lotus]
+    @test JU.select(indices, (year=1957, car="lotus"), ntnames) == [lotus]
 
     isenglish(x) = x in["lotus","aston martin"]
     @test JU.select(indices, (isenglish, ⋆)) == [lotus]
