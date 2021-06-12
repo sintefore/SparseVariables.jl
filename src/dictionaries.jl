@@ -219,6 +219,8 @@ function select(dict, sh_pat::NamedTuple, names)
 end
 select(dict::Dictionary, indices) = getindices(dict, select(keys(dict), indices))
 select(dict, f::Function) = filter(f, dict)
+kselect(sa::SparseVarArray, sh_pat::NamedTuple) = select(keys(sa.data), sh_pat, get_index_names(sa))
+select(sa::SparseVarArray, sh_pat::NamedTuple) = Dictionaries.getindices(sa, kselect(sa, sh_pat))
 
 function permfromnames(names::NamedTuple, patnames)
     perm = (names[i] for i in patnames)

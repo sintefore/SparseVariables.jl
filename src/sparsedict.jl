@@ -5,6 +5,10 @@ function Base.getindex(sa::AbstractSparseArray{T,N}, idx::NTuple{N,Any}) where {
     return getindex(sa,idx...)
 end
 
+function Base.getindex(sa::AbstractSparseArray{T,N}, idx::NamedTuple) where {T,N}
+    return select(sa, idx)
+end
+
 function Base.getindex(sa::AbstractSparseArray{T,N}, idx...) where {T,N} 
     length(idx) < N && throw(BoundsError(sa, idx))
     return get(_data(sa), idx, zero(T))
@@ -71,20 +75,24 @@ end
 _data(sa::SparseArray) = sa.data
 
 struct SparseVarArray{N} <: AbstractSparseArray{VariableRef,N} 
-   
     model::Model
     name::String 
     data::Dictionary{NTuple{N,Any},VariableRef}
+    index_names::Vector{Symbol}
+end
 
-    function SparseVarArray{N}(model::Model,name::String) where {N} 
-        dict = Dictionary{NTuple{N,Any},VariableRef}()
-        return new{N}(model, name, dict)
-    end
+function SparseVarArray{N}(model::Model,name::String) where {N} 
+    dict = Dictionary{NTuple{N,Any},VariableRef}()
+    index_names = _default_index_names(N)
+    SparseVarArray{N}(model, name, dict, index_names)
 end
 
 _data(sa::SparseVarArray) = sa.data
+_default_index_names(N) = collect(Symbol("i$i") for i=1:N)
+get_index_names(sa::SparseVarArray) = NamedTuple{tuple(sa.index_names...)}(collect(1:length(sa.index_names)))
+set_index_names!(sa::SparseVarArray{N}, new_index_names) where {N} = sa.index_names .= new_index_names
 
-function insertvar!(var::SparseVarArray{N}, index...) where {N} 
-    var[index] = @variable(var.model, lower_bound=0)
+function insertvar!(var::SparseVarArray{N}, index...;lower_bound=0) where {N} 
+    var[index] = @variable(var.model, lower_bound=lower_bound)
     set_name(var[index], variable_name(var.name,index))
 end

@@ -31,6 +31,36 @@ push!(indices, lotus)
     @test JU.select(indices, ("lotus", in([1957, 1962]) )) == [lotus]
 end
 
+@testset "Named select" begin
+    m = Model()
+    N = 998
+    more_indices = unique(zip(
+        rand(["bmw","ford","opel","mazda","volvo"], N),
+        rand(1980:2021, N),
+        rand(["red","green","black","blue","gray"], N),
+        rand(1000:250_000, N)));
+    push!(more_indices, ("lotus", 1957, "white", 21332))
+    push!(more_indices, ("rolls royce", 1950, "black", 37219))
+
+    car_vars = JU.SparseVarArray{4}(m,"cars")
+    @test typeof(car_vars) == JuMPUtils.SparseVarArray{4}
+    JU.set_index_names!(car_vars, (:maker,:year,:color,:kms))
+    @test JU.get_index_names(car_vars) == (maker = 1, year = 2, color = 3, kms = 4)
+
+    for c in more_indices
+        JU.insertvar!(car_vars,c...)
+    end
+
+    @test length( JU.kselect(car_vars,(year= <=(1960), maker= x->occursin(" ", x)))) == 1 #rolls royce
+    @test length( JU.kselect(car_vars,(;maker="lotus"))) == 1 # lotus
+    for (c,y,clr,km) in JU.kselect(car_vars, (;year= <(1960)))
+        @test y < 1960
+    end
+    c = @constraint(m, sum(car_vars[(;year= <(1960))]) <= 1)
+    @test typeof(c) <: ConstraintRef
+ 
+end
+
 @testset "Dictionaries" begin
     m = Model()
     y = JU.create_variables_dictionary3(m, 2, "y", indices)
