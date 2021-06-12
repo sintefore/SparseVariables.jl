@@ -68,15 +68,6 @@ select(data, (⋆,⋆,⋆)) == data # true
 """
 ⋆(x) = true
 
-# Using function is faster, suggest to disable:
-# function make_filter_fun(c)
-#     if c == :*
-#         return x->true
-#     else
-#         return x->x == c 
-#     end
-# end
-
 make_filter_fun(c) = x->x==c
 make_filter_fun(c::Base.Fix2) = x->c(x)
 make_filter_fun(c::Function) = x->c(x)
@@ -127,13 +118,33 @@ end
 """
     _select_gen(a, pattern)
 
-Filter iterable data by tuple `pattern` by row, using generated function for speed.
+Filter iterable data `a` by tuple `pattern` by row, using generated function for speed.
 See more straight-forward implementations `_select_rowwise` and `_select_colwise` for reference.   
 """
 function _select_gen(a, pattern)
-    filter(x->_select_generated(pattern,x), a)
+    filter(x->_select_generated(pattern, x), a)
 end
 
+"""
+    _select_gen_perm(a, pattern, perm)
+Filter iterable `data` byt tuple `pattern` by row using generated function that permutes the sequence of
+evaluation by the permutation tuple `perm` for improved control as this can give performance advantages, 
+depending on the uniqueness of the search pattern and cost of function evaluation.
+
+## Example
+
+```
+a = vcat(repeat([("volvo", 1988, "red"), ], 99), ("bmw", 1989, "green"))
+pat = (contains("w"), 1989, "green")
+_select_gen_perm(a, pat, (1,2,3)) # like _select_gen(a, pat), slower
+_select_gen_perm(a, pat, (3,2,1)) # faster
+```
+
+"""
+function _select_gen_perm(a, pattern, perm)
+    p = Permutation(perm)
+    filter(x->_select_gen_permute(pattern, x, p), a)
+end
 
 """
     _select_generated(pat,x,::Val{N}) where N
@@ -150,10 +161,82 @@ _select_generated(pat, x) = _select_generated(pat, x, Val(length(pat)))
     return :($ex)
 end
 
+_select_gen_permute(pat,x,permutation) = _select_gen_permute(pat, x, permutation, Val(length(pat)))
+
+"""
+    Permutation{N,K}
+Encode permutation as number of elements to permute `N` and number in sequence of permutations `K`
+to use for dispatch.
+"""
+struct Permutation{N,K} end
+Permutation(t::Tuple) = Permutation{length(t), _permn(length(t),t)}()
+
+"""
+    _nthperm(K, N)
+Return nth permutation as tuple given number of elements to permute `K` and number in sequence 
+of permutations `K`
+"""
+function _nthperm(N, K)
+    tuple(nthperm(collect(1:N), K)...)
+end
+
+"""
+    _permn(N, permutation)
+
+Return permutation number `K` of a tuple with `N` elements, given a `permutation`.
+"""
+function _permn(N, permutation)
+    for (k,p) in enumerate(permutations(collect(1:N)))
+        if p == collect(permutation)
+            return k
+        end
+    end
+end
+
+@generated function _select_gen_permute(pat,x,::Permutation{N,K}) where {N,K}
+    ex = :(true)
+    fs = []
+    for i = 1:N
+        push!(fs, :(make_filter_fun(pat[$i])(x[$i])))
+    end
+    for i = 1:N
+        perm = _nthperm(N,K)
+        p_i = perm[i]
+        ex = :($ex && $(fs[p_i]))
+    end
+    return :($ex)
+end
+
 """
     select(dict, indices)
 Return subset of `dict` matching selection defined by indices
 """
 select(dict, indices) = _select_gen(dict, indices)
+select(dict, indices, permutation) = _select_gen_perm(dict, indices, permutation)
+function select(dict, sh_pat::NamedTuple, names)
+    pat, perm = expand_shorthand(sh_pat, names)
+    select(dict, pat, perm)
+end
 select(dict::Dictionary, indices) = getindices(dict, select(keys(dict), indices))
 select(dict, f::Function) = filter(f, dict)
+kselect(sa::SparseVarArray, sh_pat::NamedTuple) = select(keys(sa.data), sh_pat, get_index_names(sa))
+select(sa::SparseVarArray, sh_pat::NamedTuple) = Dictionaries.getindices(sa, kselect(sa, sh_pat))
+
+function permfromnames(names::NamedTuple, patnames)
+    perm = (names[i] for i in patnames)
+    rest = setdiff((1:length(names)),perm)
+    return (perm...,rest...)
+end
+
+function expand_shorthand(sh_pat, names)
+    pat = []
+    for n in propertynames(names)
+        if haskey(sh_pat, n)
+            push!(pat, sh_pat[n])
+        else
+            push!(pat, x->true)
+        end
+    end
+    perm = permfromnames(names, propertynames(sh_pat))
+    return tuple(pat...), perm
+end

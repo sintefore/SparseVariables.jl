@@ -1,5 +1,6 @@
 module JuMPUtils
 
+using Combinatorics
 using Dictionaries
 using JuMP
 
