@@ -31,6 +31,14 @@ push!(indices, lotus)
     @test JU.select(indices, ("lotus", in([1957, 1962]) )) == [lotus]
 end
 
+@testset "Permutations" begin
+    for N = 1:10
+        for K = 1:10
+            @test JU._encode_permutation(JU._decode_permutation(N, K)) == K
+        end
+    end
+end
+
 @testset "Named select" begin
     m = Model()
     N = 998
