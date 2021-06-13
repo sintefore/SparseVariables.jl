@@ -169,29 +169,49 @@ Encode permutation as number of elements to permute `N` and number in sequence o
 to use for dispatch.
 """
 struct Permutation{N,K} end
-Permutation(t::Tuple) = Permutation{length(t), _permn(length(t),t)}()
+Permutation(t::Tuple) = Permutation{length(t), _encode_permutation(t)}()
 
 """
-    _nthperm(K, N)
-Return nth permutation as tuple given number of elements to permute `K` and number in sequence 
-of permutations `K`
-"""
-function _nthperm(N, K)
-    tuple(nthperm(collect(1:N), K)...)
-end
+    _encode_permutation(permutation)
 
+Return integer encoding the `permutation` (as base N)
 """
-    _permn(N, permutation)
-
-Return permutation number `K` of a tuple with `N` elements, given a `permutation`.
-"""
-function _permn(N, permutation)
-    for (k,p) in enumerate(permutations(collect(1:N)))
-        if p == collect(permutation)
-            return k
-        end
+# encode_permutation(permutation) = sum((permutation .- 1) .* _base_factors(Val(length(permutation))))
+@generated function _encode_permutation(permutation::NTuple{N,M}) where {N,M} 
+    s = :(0)
+    for i = 1:N
+        bf = N^(N-i)
+        s = :($s + (permutation[$i]-1) * $bf)
     end
+    return s
 end
+
+"""
+    _decode_permutation(N, K)
+Return decoded permutation from `N` (base) and `K` (number)
+"""
+
+function _decode_permutation(N, K)
+    perm = Int[]
+    base_factors = _base_factors(Val(N))
+    tmp = K
+    for i = 1:N
+        p = div(tmp, base_factors[i])
+        tmp -= p * base_factors[i]
+        push!(perm, p+1)
+    end
+    return tuple(perm...)
+end
+
+@generated function _base_factors(::Val{N}) where N
+    base_factors = Int[]
+    for i = N:-1:1
+        push!(base_factors, N^(i-1))
+    end
+    ex = :($base_factors)
+    return ex
+end
+
 
 @generated function _select_gen_permute(pat,x,::Permutation{N,K}) where {N,K}
     ex = :(true)
@@ -200,7 +220,7 @@ end
         push!(fs, :(make_filter_fun(pat[$i])(x[$i])))
     end
     for i = 1:N
-        perm = _nthperm(N,K)
+        perm = _decode_permutation(N, K)
         p_i = perm[i]
         ex = :($ex && $(fs[p_i]))
     end
