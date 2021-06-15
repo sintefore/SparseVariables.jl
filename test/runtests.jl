@@ -37,6 +37,10 @@ end
             @test JU._encode_permutation(JU._decode_permutation(N, K)) == K
         end
     end
+    for N = 1:100
+        t = tuple(collect(N:-1:1)...)
+        @test JU._decode_permutation(N, JU._encode_permutation(t)) == t
+    end
 end
 
 @testset "Named select" begin
