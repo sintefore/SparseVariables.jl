@@ -126,3 +126,6 @@ end
     @objective(m, Max, sum(z[c,i] + 2y[c,i] for c in cars, i in year))
     @test length(objective_function(m).terms) == 5
 end
+@testset "Containers" begin
+    include("dict_test.jl")
+end

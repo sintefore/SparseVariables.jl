@@ -11,7 +11,7 @@ end
 
 function Base.getindex(sa::AbstractSparseArray{T,N}, idx...) where {T,N} 
     length(idx) != N && throw(BoundsError(sa, idx))
-    return getindex(sa, idx)
+    return _getindex(sa, idx)
 end
 
 function Base.setindex!(sa::AbstractSparseArray{T,N}, val, idx::NTuple{N,Any}) where {T,N}
