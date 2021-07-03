@@ -2,7 +2,7 @@
 abstract type AbstractSparseArray{T,N} <: AbstractArray{T,N} end
 
 function Base.getindex(sa::AbstractSparseArray{T,N}, idx::NTuple{N,Any}) where {T,N} 
-    return getindex(sa,idx...)
+    return getindex(sa, idx...)
 end
 
 function Base.getindex(sa::AbstractSparseArray{T,N}, idx::NamedTuple) where {T,N}
@@ -11,7 +11,14 @@ end
 
 function Base.getindex(sa::AbstractSparseArray{T,N}, idx...) where {T,N} 
     length(idx) < N && throw(BoundsError(sa, idx))
-    return get(_data(sa), idx, zero(T))
+    retval = select(_data(sa), idx)
+    if length(retval) == 1
+        return first(retval)
+    elseif length(retval) > 0
+        return retval
+    else
+        return zero(T)
+    end
 end
 
 function Base.setindex!(sa::AbstractSparseArray{T,N}, val, idx::NTuple{N,Any}) where {T,N}

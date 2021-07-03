@@ -34,7 +34,10 @@ for ii in year
     @constraint(m, sum(car_cost[c,i] * y[c,i] for (c,i) in JU.select(y, :*, ii)) <= 300)
 end
 
-
+c =  @constraint(m, [ii in year], sum(y[:,ii]) <= 1)
+@test isa(c, JuMP.Containers.DenseAxisArray)
+@test isa(first(c), ConstraintRef)
+@test length(c) == length(year)
 
 
  

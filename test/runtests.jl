@@ -84,3 +84,7 @@ end
     a = @constraint(m, sum(JU.select(y, ("lotus", ⋆))) <=1)
     @test typeof(a) == ConstraintRef{Model, MOI.ConstraintIndex{MOI.ScalarAffineFunction{Float64}, MOI.LessThan{Float64}}, ScalarShape}
 end
+
+@testset "Containers" begin
+    include("dict_test.jl")
+end
