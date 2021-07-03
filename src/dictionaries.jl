@@ -52,6 +52,7 @@ to apply at position `pos`
 make_filter_fun(c, pos) = x->x[pos] == c 
 make_filter_fun(c::Base.Fix2, pos) = x->c(x[pos])
 make_filter_fun(c::Function, pos) = x->c(x[pos])
+make_filter_fun(c::Colon, pos) = x->true
 
 """
     ⋆(x)
@@ -71,6 +72,7 @@ select(data, (⋆,⋆,⋆)) == data # true
 make_filter_fun(c) = x->x==c
 make_filter_fun(c::Base.Fix2) = x->c(x)
 make_filter_fun(c::Function) = x->c(x)
+make_filter_fun(c::Colon) = x->true
 
 """
 	recursive_filter(fs, data)
