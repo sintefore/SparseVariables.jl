@@ -38,6 +38,3 @@ c =  @constraint(m, [ii in year], sum(y[:,ii]) <= 1)
 @test isa(c, JuMP.Containers.DenseAxisArray)
 @test isa(first(c), ConstraintRef)
 @test length(c) == length(year)
-
-
- 
