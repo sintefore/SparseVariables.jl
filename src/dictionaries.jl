@@ -268,3 +268,30 @@ function expand_shorthand(sh_pat, names)
     perm = permfromnames(names, propertynames(sh_pat))
     return tuple(pat...), perm
 end
+
+"""
+    isfixed(t)
+Return false for functions and wildcards, true for all fixed values
+Works on types because it is used in generated functiong
+
+TODO: Rather define other way around (default to true)
+"""
+isfixed(t) = false
+isfixed(::Type{T} where T<:Number) = true
+isfixed(::Type{T} where T<:AbstractString) = true
+isfixed(::Type{Symbol}) = true
+
+@generated function _getindex(sa::AbstractSparseArray{T,N}, tpl::Tuple) where {T,N}
+    lookup = true
+    for t in fieldtypes(tpl)
+        if ~isfixed(t)
+            lookup = false
+            break
+        end
+    end
+    if lookup
+        return :( get(_data(sa), tpl, zero(T)) )
+    else    # Return selection or zero if empty to avoid reduction of empty iterate
+        return :( retval = select(_data(sa), tpl); length(retval)>0 ? retval : zero(T) )
+    end
+end
