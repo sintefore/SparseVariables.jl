@@ -92,9 +92,6 @@ end
     @test typeof(a) == ConstraintRef{Model, MOI.ConstraintIndex{MOI.ScalarAffineFunction{Float64}, MOI.LessThan{Float64}}, ScalarShape}
 end
 
-@testset "Containers" begin
-    include("dict_test.jl")
-end
 @testset "SparseArray" begin
     
     @test typeof(car_cost) == JU.SparseArray{Int64, 2, Tuple{String, Int64}}
@@ -128,7 +125,10 @@ end
     
     @objective(m, Max, sum(z[c,i] + 2y[c,i] for c in cars, i in year))
     @test length(objective_function(m).terms) == 5
+
+    c =  @constraint(m, [i in year], sum(y[:, i]) <= 1)
+    @test isa(c, JuMP.Containers.DenseAxisArray)
+    @test isa(first(c), ConstraintRef)
+    @test length(c) == length(year)
 end
-@testset "Containers" begin
-    include("dict_test.jl")
-end
+
