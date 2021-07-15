@@ -130,5 +130,10 @@ end
     @test isa(c, JuMP.Containers.DenseAxisArray)
     @test isa(first(c), ConstraintRef)
     @test length(c) == length(year)
+
+    insertvar!(z, "mazda", 1990)
+    @test length(z[:, begin:2000]) == 1
+    @test length(z[:, 2000:end]) == 3
+    @test length(z["mazda", 1990:2002]) == 1
 end
 

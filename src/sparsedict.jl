@@ -46,6 +46,12 @@ function Base.show(io::IO, ::MIME"text/plain", sa::AbstractSparseArray)
 end
 Base.show(io::IO, sa::AbstractSparseArray) = show(_data(sa))
 
+# TODO: For performance, precalculate these and store in sa:
+Base.firstindex(sa::AbstractSparseArray, d) =  minimum(x->x[d], _data(sa).indices)
+Base.lastindex(sa::AbstractSparseArray, d) =  maximum(x->x[d], _data(sa).indices)
+
+
+
 
 function select(sa::AbstractSparseArray{T,N}, pattern::NTuple{N,Any}) where {T,N}
     select(keys(sa), pattern)
