@@ -98,7 +98,24 @@ _default_index_names(N) = collect(Symbol("i$i") for i=1:N)
 get_index_names(sa::SparseVarArray) = NamedTuple{tuple(sa.index_names...)}(collect(1:length(sa.index_names)))
 set_index_names!(sa::SparseVarArray{N}, new_index_names) where {N} = sa.index_names .= new_index_names
 
-function insertvar!(var::SparseVarArray{N}, index...;lower_bound=0) where {N} 
-    var[index] = @variable(var.model, lower_bound=lower_bound)
+function insertvar!(var::SparseVarArray{N}, index...; lower_bound = 0, kw_args...) where {N} 
+    if !isnothing(lower_bound)
+        var[index] = @variable(var.model; lower_bound = lower_bound)
+    else
+        var[index] = @variable(var.model)
+    end
+    
+    for kw in kw_args
+        if kw.first == :binary && kw.second
+            set_binary(var[index])
+        end
+        if kw.first == :integer && kw.second
+            set_integer(var[index])
+        end
+        if kw.first == :upper_bound 
+            set_upper_bound(var[index], kw.second)
+        end
+    end
+    
     set_name(var[index], variable_name(var.name,index))
 end
