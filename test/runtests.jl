@@ -21,8 +21,11 @@ car_cost = JU.SparseArray(Dict(
 
 @testset "Select" begin
     @test JU.select(indices, (⋆, 1957)) == [lotus]
+    @test JU.select(indices, (:, 1957)) == [lotus]
     @test JU.select(indices, (⋆, <(2000) )) == [lotus]
+    @test JU.select(indices, (:, <(2000) )) == [lotus]
     @test JU.select(indices, (⋆, <(2000)), (2,1)) == [lotus]
+    @test JU.select(indices, (:, <(2000)), (2,1)) == [lotus]
     ntnames = (car=1, year=2)
     @test JU.select(indices, (;car="lotus"), ntnames) == [lotus]
     @test JU.select(indices, (;year=1957), ntnames) == [lotus]
@@ -122,4 +125,15 @@ end
     
     @objective(m, Max, sum(z[c,i] + 2y[c,i] for c in cars, i in year))
     @test length(objective_function(m).terms) == 5
+
+    c =  @constraint(m, [i in year], sum(y[:, i]) <= 1)
+    @test isa(c, JuMP.Containers.DenseAxisArray)
+    @test isa(first(c), ConstraintRef)
+    @test length(c) == length(year)
+
+    insertvar!(z, "mazda", 1990)
+    @test length(z[:, begin:2000]) == 1
+    @test length(z[:, 2000:end]) == 3
+    @test length(z["mazda", 1990:2002]) == 1
 end
+
