@@ -272,24 +272,23 @@ end
 
 """
     isfixed(t)
-Return false for functions and wildcards, true for all fixed values
-Works on types because it is used in generated functiong
-
-TODO: Rather define other way around (default to true)
+Return false for functions, wildcards and ranges, true for all other types
+Works on types because it is used in generated function
 """
-isfixed(t) = false
-isfixed(::Type{T} where T<:Number) = true
-isfixed(::Type{T} where T<:AbstractString) = true
-isfixed(::Type{Symbol}) = true
+isfixed(t) = true
+isfixed(::Type{T} where T<:Function) = false
+isfixed(::Type{T} where T<:UnitRange) = false
+
 
 @generated function _getindex(sa::AbstractSparseArray{T,N}, tpl::Tuple) where {T,N}
     lookup = true
     for t in fieldtypes(tpl)
-        if ~isfixed(t)
+        if !isfixed(t)
             lookup = false
             break
         end
     end
+    
     if lookup
         return :( get(_data(sa), tpl, zero(T)) )
     else    # Return selection or zero if empty to avoid reduction of empty iterate
