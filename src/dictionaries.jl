@@ -228,8 +228,8 @@ end
     for i = 1:N
         push!(fs, :(make_filter_fun(pat[$i])(x[$i])))
     end
+    perm = _decode_permutation(N, K)
     for i = 1:N
-        perm = _decode_permutation(N, K)
         p_i = perm[i]
         ex = :($ex && $(fs[p_i]))
     end
