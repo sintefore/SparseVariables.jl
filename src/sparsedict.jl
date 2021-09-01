@@ -93,6 +93,13 @@ function SparseVarArray{N}(model::Model,name::String) where {N}
     SparseVarArray{N}(model, name, dict, index_names)
 end
 
+function SparseVarArray{N}(model::Model, name::String, ind_names) where {N} 
+    dict = Dictionary{NTuple{N,Any},VariableRef}()
+    index_names = ind_names
+    SparseVarArray{N}(model, name, dict, index_names)
+end
+
+
 _data(sa::SparseVarArray) = sa.data
 _default_index_names(N) = collect(Symbol("i$i") for i=1:N)
 get_index_names(sa::SparseVarArray) = NamedTuple{tuple(sa.index_names...)}(collect(1:length(sa.index_names)))

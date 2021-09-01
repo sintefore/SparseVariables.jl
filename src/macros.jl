@@ -11,8 +11,7 @@ end
 #    y = @sparsevariable(m, y[c,i] for (c,i) in idx)
 
 # Consider having sparse variables with restrictions on the index set?
-#   y = @sparsevariable(m, y[c,i] for c in cars, i in year)
-#   y = @sparsevariable(m, y[c,i] for c in String, i in Int64)
+#   y = @sparsevariable(m, y[cars,year])
 # 
 # TODO: - variable bounds
 macro sparsevariable(args...)
@@ -22,15 +21,14 @@ macro sparsevariable(args...)
 
     ex, kw_args = _extract_kw(args[2:end])
     ex = ex[1]
-    
+
     if isa(ex.args[1], Symbol)
         v = ex.args[1]  # variable    
         vname = string(v)
         idx = ex.args[2:end]
-        dim = length(idx)
-      
+        dim = length(idx)  
         return quote
-            $(esc(v)) = $(esc(m))[Symbol($vname)] = SparseVarArray{$dim}($(esc(m)), $vname)
+            $(esc(v)) = $(esc(m))[Symbol($vname)] = SparseVarArray{$dim}($(esc(m)), $vname, $idx)
         end    
     end
 
@@ -46,7 +44,7 @@ macro sparsevariable(args...)
     insertcall = :(insertvar!($(esc(v)), $i...))
     JuMP._add_kw_args(insertcall, kw_args)
     return quote
-        $(esc(v)) = $(esc(m))[Symbol($vname)] = SparseVarArray{$dim}($(esc(m)), $vname)
+        $(esc(v)) = $(esc(m))[Symbol($vname)] = SparseVarArray{$dim}($(esc(m)), $vname, $idx)
         for $i in $(esc(I))
             $insertcall
         end

@@ -3,6 +3,7 @@ using Dictionaries
 using Test
 using JuMP
 using JuMPUtils
+using Cbc
 
 const JU = JuMPUtils
 
@@ -137,3 +138,24 @@ end
     @test length(z["mazda", 1990:2002]) == 1
 end
 
+@testset "Tables" begin
+    m = Model()
+    @sparsevariable(m, y[c,i] for (c,i) in keys(car_cost))
+    @sparsevariable(m, z[car,year])
+    for c in ["opel", "tesla", "nikola"]
+        insertvar!(z, c, 2002)
+    end
+    @constraint(m, con1, sum(y[c,i] + z[c,i] for c in cars, i in year) <= 300)
+    @constraint(m, con2[i in year], sum(car_cost[c,i] * y[c,i] for (c,i) in JU.select(y, ⋆, i)) <= 300)
+
+    @objective(m, Max, sum(z[c,i] + 2y[c,i] for c in cars, i in year))
+
+    set_optimizer(m, Cbc.Optimizer)
+    optimize!(m)
+
+    t = JU.SolutionTable(y)
+
+    r = JU.SolutionRow(("bmw",2001), 3.2, JU.names(t))
+    
+end
+ 
