@@ -8,3 +8,11 @@ Version 0.1.0 (2021-06-11)
 * SparseArray for data and JuMP-variables with zero for non-existing indices
 * Customized and fast routines for index selection based on patterns
 * Support for dynamic creation of new entries in variable arrays (SparseVarArray) 
+
+Version 0.3.0 (2021-09-08)
+--------------------------
+* Slicing and selection with ':'
+* Sparse variables with index names in construction
+* Support Tables.jl interface for solution variables
+
+

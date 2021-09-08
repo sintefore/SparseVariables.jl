@@ -1,7 +1,7 @@
 name = "JuMPUtils"
 uuid = "2b8dd34a-38a9-4167-b666-ba0c47c9bf33"
 authors = ["Truls Flatberg <Truls.Flatberg@sintef.no>", "Lars Hellemo <Lars.Hellemo@sintef.no>"]
-version = "0.2.1"
+version = "0.3.0"
 
 [deps]
 Dictionaries = "85a47980-9c8c-11e8-2b9f-f7ca1fa99fb4"
