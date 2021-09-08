@@ -11,7 +11,7 @@ include("tables.jl")
 
 export @sparsevariable
 export insertvar!
-export ⋆
+export SolutionTable
 
 
 end # module
