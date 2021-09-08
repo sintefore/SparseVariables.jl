@@ -3,7 +3,7 @@
 This package contains routines for improved and easier handling of sparse data 
 and sparse arrays of optimizaton variables in JuMP.
 
-# Usage
+## Usage
 
 ```julia
 using JuMPUtils
@@ -24,10 +24,10 @@ car_cost = JU.SparseArray(Dict(
     ))
 
 # Variable defined for a given set of tuples
-@sparsevariable(m, y[c,i] for (c,i) in keys(car_cost))
+@sparsevariable(m, y[car, year] for (car,year) in keys(car_cost))
 
 # Empty variable with 2 indices
-@sparsevariable(m, z[c,i])
+@sparsevariable(m, z[car, year])
 
 # Dynamic creation of variables
 for c in ["opel", "tesla", "nikola"]
@@ -39,15 +39,24 @@ end
 
 # Efficient filtering using select syntax
 for i in year
-    @constraint(m, sum(car_cost[c,i] * y[c,i] for (c,i) in JU.select(y, ⋆, i)) <= 300)
+    @constraint(m, sum(car_cost[c,i] * y[c,i] for (c,i) in JU.select(y, :, i)) <= 300)
 end
 
 ```
 
+## Solution information
+
+The package defines a structure SolutionTable that supports the Tables.jl interface, allowing 
+easy output of solution values to e.g. a dataframe
+```julia
+using DataFrames
+
+df = DataFrame(SolutionTable(y))
+```
+
+
 ## TODO
 
-* Set variable bounds (currently only >= 0) and binary/integer property
 * Support for broadcasting?
-* Convert solution array to dataframe
 * Restriction on allowable indices (e.g. only a fixed set allowed)
 

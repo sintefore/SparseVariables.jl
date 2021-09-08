@@ -54,20 +54,6 @@ make_filter_fun(c::Base.Fix2, pos) = x->c(x[pos])
 make_filter_fun(c::Function, pos) = x->c(x[pos])
 make_filter_fun(c::Colon, pos) = x->true
 
-"""
-    ⋆(x)
-Returns true. To be used as shorthand for wildcard function in patterns for select/filtering.
-
-The most obvious choices are reserved characters (*,∀,? and ¿). To use a different character, 
-simply define a new function to add it, e.g.: `∎(x) = true`
-
-# Example
-```
-data = [("bmw",1929,"black")]
-select(data, (⋆,⋆,⋆)) == data # true
-```
-"""
-⋆(x) = true
 
 make_filter_fun(c) = x->x==c
 make_filter_fun(c::Base.Fix2) = x->c(x)
