@@ -62,8 +62,8 @@ end
     push!(more_indices, ("lotus", 1957, "white", 21332))
     push!(more_indices, ("rolls royce", 1950, "black", 37219))
 
-    car_vars = JU.SparseVarArray{4}(m,"cars")
-    @test typeof(car_vars) == JuMPUtils.SparseVarArray{4}
+    car_vars = JU.SparseVarArray(m,"cars", [:maker,:year,:color,:kms])
+    @test typeof(car_vars) == JuMPUtils.SparseVarArray{4, Tuple{Any, Any, Any, Any}}
     JU.set_index_names!(car_vars, (:maker,:year,:color,:kms))
     @test JU.get_index_names(car_vars) == (maker = 1, year = 2, color = 3, kms = 4)
 
@@ -81,32 +81,23 @@ end
  
 end
 
-@testset "Dictionaries" begin
-    m = Model()
-    y = JU.create_variables_dictionary3(m, 2, "y", indices)
-    @test typeof(y) == Dictionary{Tuple{String, Int64}, VariableRef}
-
-    a = @constraint(m, sum(JU.select(y, ("lotus", :))) <=1)
-    @test typeof(a) == ConstraintRef{Model, MOI.ConstraintIndex{MOI.ScalarAffineFunction{Float64}, MOI.LessThan{Float64}}, ScalarShape}
-end
-
+car_cost["lotus", 1957] = 500
 @testset "SparseArray" begin
     
     @test typeof(car_cost) == JU.SparseArray{Int64, 2, Tuple{String, Int64}}
-    @test length(car_cost) == 4
+    @test length(car_cost) == 5
 
     @test car_cost["bmw", 2001] == 200
     @test car_cost["bmw", 2003] == 0
    
-    car_cost["lotus", 1957] = 500
     @test length(car_cost) == 5
     @test car_cost["lotus", 1957] == 500
 end
 
 @testset "SparseVarArray" begin
     m = Model()
-    @sparsevariable(m, y[c,i] for (c,i) in keys(car_cost))
-    @test typeof(y) == JU.SparseVarArray{2}
+    @sparsevariable(m, y[c,i] for (c,i) in collect(keys(car_cost)))
+    @test typeof(y) == JU.SparseVarArray{2 ,Tuple{String, Int}}
 
     @sparsevariable(m, z[c,i])
     @test length(z) == 0
@@ -137,7 +128,7 @@ end
 
 @testset "Tables" begin
     m = Model()
-    @sparsevariable(m, y[car,year] for (car,year) in keys(car_cost))
+    @sparsevariable(m, y[car,year] for (car,year) in collect(keys(car_cost)))
     @sparsevariable(m, z[car,year])
     for c in ["opel", "tesla", "nikola"]
         insertvar!(z, c, 2002)
@@ -148,11 +139,14 @@ end
     @objective(m, Max, sum(z[c,i] + 2y[c,i] for c in cars, i in year))
 
     set_optimizer(m, Cbc.Optimizer)
+    set_optimizer_attribute(m, MOI.Silent(), true)
+    set_optimizer_attributes(m, "loglevel" => 0)
     optimize!(m)
 
     t = JU.SolutionTable(y)
     @test typeof(t) == JU.SolutionTable
-    @test length(t) == 4
+
+    @test length(t) == 5
 
     r = first(t)
     @test typeof(r) == JU.SolutionRow
