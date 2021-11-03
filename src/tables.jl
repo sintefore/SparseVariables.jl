@@ -1,15 +1,5 @@
+abstract type SolutionTable end
 
-struct SolutionTable
-    names::Vector{Symbol}
-    lookup::Dict{Symbol, Int}
-    var::SparseVarArray
-end
-
-function SolutionTable(v::SparseVarArray)
-    names = vcat(v.index_names, Symbol(v.name))
-    lookup = Dict(nm=>i for (i, nm) in enumerate(names))
-    return SolutionTable(names, lookup, v)
-end
 
 Tables.istable(::Type{<:SolutionTable}) = true
 rowacccess(::Type{<:SolutionTable}) = true
@@ -21,24 +11,11 @@ lookup(t::SolutionTable) = getfield(t, :lookup)
 Base.eltype(::SolutionTable) = SolutionRow
 Base.length(t::SolutionTable) = length(t.var)
 
-function Base.iterate(t::SolutionTable)
-    next = iterate(keys(t.var.data))
-    next === nothing && return nothing
-    return SolutionRow(next[1], JuMP.value(t.var[next[1]]), t), next[2]
-end
-
-function Base.iterate(t::SolutionTable, state)
-    next = iterate(keys(t.var.data), state)
-    next === nothing && return nothing
-    return SolutionRow(next[1], JuMP.value(t.var[next[1]]), t), next[2]
-end
-
 struct SolutionRow <: Tables.AbstractRow
     index_vals
     sol_val::Float64
     source::SolutionTable
 end
-
 
 function Tables.getcolumn(s::SolutionRow, i::Int) 
     if i > length(getfield(s, :index_vals))
@@ -46,7 +23,6 @@ function Tables.getcolumn(s::SolutionRow, i::Int)
     end
     return getfield(s, :index_vals)[i]
 end
-
 
 function Tables.getcolumn(s::SolutionRow, nm::Symbol) 
     i = lookup(getfield(s, :source))[nm]
@@ -57,3 +33,56 @@ function Tables.getcolumn(s::SolutionRow, nm::Symbol)
 end
     
 Tables.columnnames(s::SolutionRow) = names(getfield(s, :source))
+
+struct SolutionTableSparse <: SolutionTable
+    names::Vector{Symbol}
+    lookup::Dict{Symbol, Int}
+    var::SparseVarArray
+end
+
+function SolutionTableSparse(v::SparseVarArray)
+    if length(v) > 0 && !has_values(first(v.data).model)
+        error("No solution values available for variable")
+    end
+    names = vcat(v.index_names, Symbol(v.name))
+    lookup = Dict(nm=>i for (i, nm) in enumerate(names))
+    return SolutionTableSparse(names, lookup, v)
+end
+
+function Base.iterate(t::SolutionTableSparse, state = nothing)
+    next = isnothing(state) ? iterate(keys(t.var.data)) : iterate(keys(t.var.data), state)
+    next === nothing && return nothing
+    return SolutionRow(next[1], JuMP.value(t.var[next[1]]), t), next[2]
+end
+
+table(var::SparseVarArray) = SolutionTableSparse(var)
+
+struct SolutionTableDense <: SolutionTable
+    names::Vector{Symbol}
+    lookup::Dict{Symbol, Int}
+    var::Containers.DenseAxisArray
+end
+
+macro name(arg)
+    string(arg)
+end
+
+function SolutionTableDense(v::Containers.DenseAxisArray{VariableRef,N,Ax,L}, colnames...) where {N,Ax,L}
+    if length(colnames) < length(axes(v))
+        error("Not enough column names provided")
+    end
+    if length(v) > 0 && !has_values(first(v).model)
+        error("No solution values available for variable")
+    end
+    names = vcat(colnames..., Symbol(@name(v)))
+    lookup = Dict(nm=>i for (i, nm) in enumerate(names))
+    return SolutionTableDense(names, lookup, v)
+end
+
+function Base.iterate(t::SolutionTableDense, state = nothing)
+    next = isnothing(state) ? iterate(eachindex(t.var)) : iterate(eachindex(t.var), state)
+    next === nothing && return nothing
+    return SolutionRow(next[1], JuMP.value(t.var[next[1]]), t), next[2]
+end
+
+table(var::Containers.DenseAxisArray{VariableRef,N,Ax,L}, names...) where {N,Ax,L} = SolutionTableDense(var,names...) 
