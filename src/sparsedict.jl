@@ -67,15 +67,20 @@ struct SparseArray{T,N, K <: NTuple{N,Any} } <: AbstractSparseArray{T,N}
 end
 
 function SparseArray(d::Dict{K,T}) where {T,N,K <: NTuple{N,Any}}
-    return SparseArray{T,N,K}(Dictionary(d))
+    return SparseArray(Dictionary(d))
+end
+
+function SparseArray(d::Dict{S,T}) where {S,T}
+    dd = Dict( (key,) => val for (key,val) in d)
+    return SparseArray(Dictionary(dd))
 end
 
 function SparseArray{T,N}() where {T,N}
-    return SparseArray{T,N,NTuple{N,Any}}(Dictionary{NTuple{N,Any},T}())
+    return SparseArray(Dictionary{NTuple{N,Any},T}())
 end
 
 function SparseArray{T,N,K}() where {T,N,K <: NTuple{N,Any}}
-    return SparseArray{T,N,K}(Dictionary{K,T}())
+    return SparseArray(Dictionary{K,T}())
 end
 
 _data(sa::SparseArray) = sa.data
