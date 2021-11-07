@@ -2,6 +2,7 @@ using Base: product
 using Dictionaries
 using Test
 using JuMP
+using DataFrames
 using JuMPUtils
 using Cbc
 
@@ -158,11 +159,13 @@ end
     @test typeof(r) == JU.SolutionRow
     @test r.car == "bmw"
 
-    t2 = table(u, :car, :year)
+    t2 = table(u, :u, :car, :year)
     @test typeof(t2) == JU.SolutionTableDense
     @test length(t2) == 12
     rows = collect(t2)
-    @test rows[11].year == 4
+    @test rows[11].year == 2003
 
+    df = dataframe(u, :u, :car, :year)
+    @test first(df.car) == "ford"
 end
  
