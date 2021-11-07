@@ -40,11 +40,13 @@ struct SolutionTableSparse <: SolutionTable
     var::SparseVarArray
 end
 
-function SolutionTableSparse(v::SparseVarArray)
+SolutionTableSparse(v::SparseVarArray) = SolutionTableSparse(v, Symbol(v.name))
+
+function SolutionTableSparse(v::SparseVarArray, name)
     if length(v) > 0 && !has_values(first(v.data).model)
         error("No solution values available for variable")
     end
-    names = vcat(v.index_names, Symbol(v.name))
+    names = vcat(v.index_names, name)
     lookup = Dict(nm=>i for (i, nm) in enumerate(names))
     return SolutionTableSparse(names, lookup, v)
 end
@@ -56,33 +58,43 @@ function Base.iterate(t::SolutionTableSparse, state = nothing)
 end
 
 table(var::SparseVarArray) = SolutionTableSparse(var)
+table(var::SparseVarArray, name) = SolutionTableSparse(var, name)
+
 
 struct SolutionTableDense <: SolutionTable
     names::Vector{Symbol}
     lookup::Dict{Symbol, Int}
+    index_lookup::Dict
     var::Containers.DenseAxisArray
 end
 
-macro name(arg)
-    string(arg)
-end
+#macro name(arg)
+#    string(arg)
+#end
 
-function SolutionTableDense(v::Containers.DenseAxisArray{VariableRef,N,Ax,L}, colnames...) where {N,Ax,L}
+function SolutionTableDense(v::Containers.DenseAxisArray{VariableRef,N,Ax,L}, name, colnames...) where {N,Ax,L}
     if length(colnames) < length(axes(v))
         error("Not enough column names provided")
     end
     if length(v) > 0 && !has_values(first(v).model)
         error("No solution values available for variable")
     end
-    names = vcat(colnames..., Symbol(@name(v)))
+    names = vcat(colnames..., name)
     lookup = Dict(nm=>i for (i, nm) in enumerate(names))
-    return SolutionTableDense(names, lookup, v)
+    index_lookup = Dict()
+    for (i, ax) in enumerate(v.axes)
+        index_lookup[i] = collect(ax) 
+    end
+    return SolutionTableDense(names, lookup, index_lookup, v)
 end
 
 function Base.iterate(t::SolutionTableDense, state = nothing)
     next = isnothing(state) ? iterate(eachindex(t.var)) : iterate(eachindex(t.var), state)
     next === nothing && return nothing
-    return SolutionRow(next[1], JuMP.value(t.var[next[1]]), t), next[2]
+    index = next[1]
+    index_vals = [t.index_lookup[i][index[i]] for i in 1:length(index)]
+    return SolutionRow(index_vals, JuMP.value(t.var[next[1]]), t), next[2]
 end
 
-table(var::Containers.DenseAxisArray{VariableRef,N,Ax,L}, names...) where {N,Ax,L} = SolutionTableDense(var,names...) 
+table(var::Containers.DenseAxisArray{VariableRef,N,Ax,L}, name, colnames...) where {N,Ax,L} = 
+    SolutionTableDense(var,name, colnames...) 
