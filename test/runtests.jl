@@ -2,6 +2,7 @@ using Base: product
 using Dictionaries
 using Test
 using JuMP
+using DataFrames
 using JuMPUtils
 using Cbc
 
@@ -130,26 +131,40 @@ end
     m = Model()
     @sparsevariable(m, y[car,year] for (car,year) in collect(keys(car_cost)))
     @sparsevariable(m, z[car,year])
+    @variable(m, u[cars, year])
     for c in ["opel", "tesla", "nikola"]
         insertvar!(z, c, 2002)
     end
     @constraint(m, con1, sum(y[c,i] + z[c,i] for c in cars, i in year) <= 300)
     @constraint(m, con2[i in year], sum(car_cost[c,i] * y[c,i] for (c,i) in JU.select(y, :, i)) <= 300)
 
-    @objective(m, Max, sum(z[c,i] + 2y[c,i] for c in cars, i in year))
+    for c in cars, y in year
+        @constraint(m, u[c,y] <= 1)
+    end
+
+    @objective(m, Max, sum(z[c,i] + 2y[c,i] for c in cars, i in year) + sum(u[c,2002] for c in cars))
 
     set_optimizer(m, Cbc.Optimizer)
     set_optimizer_attribute(m, MOI.Silent(), true)
     set_optimizer_attributes(m, "loglevel" => 0)
     optimize!(m)
 
-    t = JU.SolutionTable(y)
-    @test typeof(t) == JU.SolutionTable
+    tab = table(y)
+    @test typeof(tab) == JU.SolutionTableSparse
 
-    @test length(t) == 5
+    @test length(tab) == 5
 
-    r = first(t)
+    r = first(tab)
     @test typeof(r) == JU.SolutionRow
     @test r.car == "bmw"
+
+    t2 = table(u, :u, :car, :year)
+    @test typeof(t2) == JU.SolutionTableDense
+    @test length(t2) == 12
+    rows = collect(t2)
+    @test rows[11].year == 2003
+
+    df = dataframe(u, :u, :car, :year)
+    @test first(df.car) == "ford"
 end
  
