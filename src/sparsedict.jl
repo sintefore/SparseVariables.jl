@@ -111,8 +111,12 @@ function SparseVarArray{N,T}(model::Model, name::String, ind_names) where {N,T}
 end
 
 function SparseVarArray{N,T}(model::Model, name::String, ind_names, indices::Vector{<:Tuple}; lower_bound = 0, kw_args... ) where {N,T}
-    dict = Dictionary(indices, (createvar(model, name, k; lower_bound, kw_args) for k in indices))
+    dict = Dictionary(indices, (createvar(model, name, k; lower_bound, kw_args...) for k in indices)) 
     model[Symbol(name)] = SparseVarArray{N,T}(model, name, dict, ind_names)
+end
+
+function SparseVarArray{N,T}(model::Model, name::String, ind_names, indices::Dictionaries.Indices{<:Tuple}; lower_bound = 0, kw_args... ) where {N,T}
+    SparseVarArray{N,T}(model, name, ind_names, collect(indices); lower_bound, kw_args...)
 end
 
 function SparseVarArray(m,n,ind_names)
@@ -134,7 +138,7 @@ function insertvar!(var::SparseVarArray{N}, index...; lower_bound = 0, kw_args..
     var[index] = createvar(var.model, var.name, index; lower_bound, kw_args)
 end
 
-function createvar(model, name, index...; lower_bound = 0, kw_args... )
+function createvar(model, name, index...; lower_bound = 0, kw_args...)
     if !isnothing(lower_bound)
         var = @variable(model; lower_bound = lower_bound)
     else

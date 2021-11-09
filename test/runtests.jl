@@ -99,7 +99,11 @@ end
     m = Model()
     @sparsevariable(m, y[c,i] for (c,i) in collect(keys(car_cost)))
     @test typeof(y) == JU.SparseVarArray{2 ,Tuple{String, Int}}
-
+   
+    @sparsevariable(m, w[c,i] for (c,i) in keys(car_cost); binary=true)
+    @test typeof(w) == JU.SparseVarArray{2 ,Tuple{String, Int}}
+    @test count(JuMP.is_binary(w[c,i]) for (c,i) in JU.select(w,"bmw",:)) == 2
+  
     @sparsevariable(m, z[c,i])
     @test length(z) == 0
     for c in ["opel", "tesla", "nikola"]
