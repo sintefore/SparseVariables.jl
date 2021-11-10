@@ -28,7 +28,7 @@ macro sparsevariable(args...)
         idx = ex.args[2:end]
         dim = length(idx)  
         return quote
-            $(esc(v)) = $(esc(m))[Symbol($vname)] = SparseVarArray{$dim}($(esc(m)), $vname, $idx)
+            $(esc(v)) = $(esc(m))[Symbol($vname)] = SparseVarArray($(esc(m)), $vname, $idx)
         end    
     end
 
@@ -39,14 +39,13 @@ macro sparsevariable(args...)
     
     # For iteration
     itr = ex.args[2]
-    i = itr.args[1]
     I = itr.args[2]
-    insertcall = :(insertvar!($(esc(v)), $i...))
-    JuMP._add_kw_args(insertcall, kw_args)
+    
+    sva = :(SparseVarArray($(esc(m)), $vname, $idx, $(esc(I))))
+    for kw in kw_args
+        push!(sva.args, esc(Expr(:kw, kw.args...)))
+    end
     return quote
-        $(esc(v)) = $(esc(m))[Symbol($vname)] = SparseVarArray{$dim}($(esc(m)), $vname, $idx)
-        for $i in $(esc(I))
-            $insertcall
-        end
+        $(esc(v)) = $(esc(m))[Symbol($vname)] = $sva
     end
 end

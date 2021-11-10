@@ -63,8 +63,8 @@ end
     push!(more_indices, ("lotus", 1957, "white", 21332))
     push!(more_indices, ("rolls royce", 1950, "black", 37219))
 
-    car_vars = JU.SparseVarArray{4}(m,"cars")
-    @test typeof(car_vars) == JuMPUtils.SparseVarArray{4}
+    car_vars = JU.SparseVarArray(m,"cars", [:maker,:year,:color,:kms])
+    @test typeof(car_vars) == JuMPUtils.SparseVarArray{4, Tuple{Any, Any, Any, Any}}
     JU.set_index_names!(car_vars, (:maker,:year,:color,:kms))
     @test JU.get_index_names(car_vars) == (maker = 1, year = 2, color = 3, kms = 4)
 
@@ -82,25 +82,28 @@ end
  
 end
 
-
+car_cost["lotus", 1957] = 500
 @testset "SparseArray" begin
     
     @test typeof(car_cost) == JU.SparseArray{Int64, 2, Tuple{String, Int64}}
-    @test length(car_cost) == 4
+    @test length(car_cost) == 5
 
     @test car_cost["bmw", 2001] == 200
     @test car_cost["bmw", 2003] == 0
    
-    car_cost["lotus", 1957] = 500
     @test length(car_cost) == 5
     @test car_cost["lotus", 1957] == 500
 end
 
 @testset "SparseVarArray" begin
     m = Model()
-    @sparsevariable(m, y[c,i] for (c,i) in keys(car_cost))
-    @test typeof(y) == JU.SparseVarArray{2}
-
+    @sparsevariable(m, y[c,i] for (c,i) in collect(keys(car_cost)))
+    @test typeof(y) == JU.SparseVarArray{2 ,Tuple{String, Int}}
+   
+    @sparsevariable(m, w[c,i] for (c,i) in keys(car_cost); binary=true)
+    @test typeof(w) == JU.SparseVarArray{2 ,Tuple{String, Int}}
+    @test count(JuMP.is_binary(w[c,i]) for (c,i) in JU.select(w,"bmw",:)) == 2
+  
     @sparsevariable(m, z[c,i])
     @test length(z) == 0
     for c in ["opel", "tesla", "nikola"]
@@ -130,7 +133,7 @@ end
 
 @testset "Tables" begin
     m = Model()
-    @sparsevariable(m, y[car,year] for (car,year) in keys(car_cost))
+    @sparsevariable(m, y[car,year] for (car,year) in collect(keys(car_cost)))
     @sparsevariable(m, z[car,year])
     @variable(m, u[cars, year])
     for c in ["opel", "tesla", "nikola"]

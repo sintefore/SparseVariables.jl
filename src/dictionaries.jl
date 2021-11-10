@@ -2,47 +2,6 @@ function variable_name(var::String, index)
     return var *"[" *  join(index,", ") * "]"
 end
 
-function create_variables_dictionary(model::JuMP.Model, dim::Int, varname, indices)
-
-    # var = SparseDict{dim, VariableRef}()
-    var = Dictionary{eltype(indices),VariableRef}()
-
-    for i in indices
-        v = @variable(model, lower_bound = 0)
-        insert!(var, i, v)
-        set_name(v, variable_name(varname,i))
-    end
-    model[Symbol(varname)] = var
-
-    return var
-end
-
-
-function create_variables_dictionary2(model::JuMP.Model, dim::Int, varname, indices;lower_bound=0)
-
-    var = Array{VariableRef}(undef, length(indices))
-
-    for (idx,i) in enumerate(indices)
-        v = @variable(model, lower_bound=0)
-        var[idx] = v
-        set_name(v, variable_name(varname,i))
-    end
-    
-    return Dictionary(indices, var)
-end
-
-
-
-function create_variables_dictionary3(model::JuMP.Model, dim::Int, varname, indices)
-
-    var = Dictionary(indices, (@variable(model; lower_bound=0) for _ in indices))
-    for (k,v) in pairs(var)
-        set_name(v, variable_name(varname, k))
-    end
-    
-    return var
-end
-
 """
     make_filter_fun(c, pos)
 
