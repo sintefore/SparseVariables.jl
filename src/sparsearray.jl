@@ -91,6 +91,11 @@ end
 
 _data(sa::SparseArray) = sa.data
 
+"""
+    SparseVarArray{N,T}
+
+    Structure for holding an optimization variable with a sparse structure. 
+"""
 struct SparseVarArray{N,T} <: AbstractSparseArray{VariableRef,N}
     model::Model
     name::String 
@@ -134,6 +139,11 @@ _default_index_names(N) = collect(Symbol("i$i") for i=1:N)
 get_index_names(sa::SparseVarArray) = NamedTuple{tuple(sa.index_names...)}(collect(1:length(sa.index_names)))
 set_index_names!(sa::SparseVarArray{N}, new_index_names) where {N} = sa.index_names .= new_index_names
 
+"""
+    insertvar!(var::SparseVarArray{N}, index...; lower_bound = 0, kw_args...)
+
+Insert a new variable with the given index. 
+"""
 function insertvar!(var::SparseVarArray{N}, index...; lower_bound = 0, kw_args...) where {N} 
     var[index] = createvar(var.model, var.name, index; lower_bound, kw_args)
 end

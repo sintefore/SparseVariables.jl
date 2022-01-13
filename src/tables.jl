@@ -68,10 +68,6 @@ struct SolutionTableDense <: SolutionTable
     var::Containers.DenseAxisArray
 end
 
-#macro name(arg)
-#    string(arg)
-#end
-
 function SolutionTableDense(v::Containers.DenseAxisArray{VariableRef,N,Ax,L}, name, colnames...) where {N,Ax,L}
     if length(colnames) < length(axes(v))
         error("Not enough column names provided")

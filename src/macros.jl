@@ -6,14 +6,21 @@ function _extract_kw(args)
     return flat_args, kw_args
 end
 
-# Create a sparse array to hold JuMP variables
-# Supports two variations:
-#    y = @sparsevariable(m, y[c,i] for (c,i) in idx)
 
-# Consider having sparse variables with restrictions on the index set?
-#   y = @sparsevariable(m, y[cars,year])
-# 
-# TODO: - variable bounds
+"""
+    sparsevariable(args...)
+
+Create a sparse array to hold JuMP variables. The array can be created 
+empty or have variables for a provided index set. The array name will
+be registered with the model.
+
+## Example
+ ```julia
+@sparsevariable(m, x[cars,year])  
+idx = [("volvo",1989), ("nissan",1988), ("nissan", 1991)]
+@sparsevariable(m, x[cars,year] for (cars,year) in idx)
+ ```    
+"""
 macro sparsevariable(args...)
 
     args = JuMP._reorder_parameters(args)
