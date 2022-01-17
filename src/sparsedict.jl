@@ -63,9 +63,9 @@ function select(sa::AbstractSparseArray{T,N}, pattern::NTuple{N,Any}) where {T,N
     select(keys(sa), pattern)
 end
 
-function select(sa::AbstractSparseArray{T,N}, pattern...) where {T,N} 
+function select(sa::AbstractSparseArray{T,N}, pattern...; cache = true) where {T,N} 
     length(pattern) != N && throw(BoundsError(sa, pattern))
-    select(keys(sa), pattern)
+    select_test(sa, pattern, cache)
 end
 
 struct SparseArray{T,N, K <: NTuple{N,Any} } <: AbstractSparseArray{T,N}
@@ -91,6 +91,8 @@ struct SparseVarArray{N,T} <: AbstractSparseArray{VariableRef,N}
     name::String 
     data::Dictionary{T,VariableRef}
     index_names::Vector{Symbol}
+
+    index_cache::Dict
 end
 
 function SparseVarArray{N,T}(model::Model,name::String) where {N,T} 
@@ -102,12 +104,12 @@ end
 function SparseVarArray{N,T}(model::Model, name::String, ind_names) where {N,T} 
     dict = Dictionary{NTuple{N,Any},VariableRef}()
     index_names = ind_names
-    SparseVarArray{N,T}(model, name, dict, index_names)
+    SparseVarArray{N,T}(model, name, dict, index_names, Dict())
 end
 
 function SparseVarArray{N,T}(model::Model, name::String, ind_names, indices::Vector{<:Tuple}; lower_bound = 0, kw_args... ) where {N,T}
     dict = Dictionary(indices, (createvar(model, name, k; lower_bound, kw_args) for k in indices))
-    model[Symbol(name)] = SparseVarArray{N,T}(model, name, dict, ind_names)
+    model[Symbol(name)] = SparseVarArray{N,T}(model, name, dict, ind_names, Dict())
 end
 
 function SparseVarArray(m,n,ind_names)
@@ -131,7 +133,7 @@ end
 
 function createvar(model, name, index...; lower_bound = 0, kw_args... )
     if !isnothing(lower_bound)
-        var = @variable(model; lower_bound = lower_bound)
+        var = @variable(model, lower_bound = lower_bound)
     else
         var = @variable(model)
     end

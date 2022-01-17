@@ -1,0 +1,105 @@
+model transport
+
+uses "mmxprs", "mmsystem"
+
+declarations
+    nf = 10
+    nc = 1000
+    np = 20
+    nt = 100
+
+    F = 1..nf
+    C = 1..nc
+    P = 1..np
+    T = 1..nt
+
+    CanProduce: dynamic array(F,P) of boolean
+    ProdCap: dynamic array(F,T) of real
+    Demand: dynamic array(C,P,T) of real
+    FlowCap: dynamic array(F,C) of real
+
+    timingStart: datetime
+end-declarations
+
+! Set up random problem based on probabilities
+setrandseed(42)
+declarations
+    prodprob = 0.2
+    demandprob = 0.05
+    flowprob = 0.8
+end-declarations
+
+forall(f in F, p in P) do
+    if random < prodprob then
+        CanProduce(f,p) := true
+    end-if
+end-do
+forall(f in F, t in T) do
+    ProdCap(f,t) := 100 * random
+end-do
+forall(c in C, p in P, t in T) do
+    if random < demandprob then
+        Demand(c,p,t) := random
+    end-if
+end-do
+forall(f in F, c in C) do
+    if random < flowprob then
+        FlowCap(f,c) := 20 * random
+    end-if
+end-do
+
+procedure startTiming
+	timingStart := datetime(SYS_NOW)
+end-procedure
+
+procedure endTiming(name: string)
+	writeln(" " + name + ": " + strfmt(datetime(SYS_NOW)  - timingStart,4,2) + " sec")
+end-procedure
+
+
+
+declarations
+    flow: dynamic array(F,C,P,T) of mpvar
+end-declarations
+
+! Create variables
+startTiming
+forall(c in C, p in P, t in T | exists(Demand(c,p,t)) ) do
+    forall(f in F | CanProduce(f,p) ) do
+        create(flow(f,c,p,t))
+    end-do
+end-do
+endTiming("variable creation")
+
+declarations
+    prodCap: dynamic array(F,T) of linctr
+    coverDemand: dynamic array(C,P,T) of linctr
+    transportCap: dynamic array(F,C,T) of linctr
+end-declarations
+
+
+! Constraints
+startTiming
+
+forall(f in F, t in T | exists(ProdCap(f,t)) ) do
+    prodCap(f,t) :=
+    sum(c in C, p in P | exists(flow(f,c,p,t)) ) flow(f,c,p,t) <= ProdCap(f,t)
+end-do
+
+forall(c in C, p in P, t in T | exists(Demand(c,p,t)) ) do
+    coverDemand(c,p,t) :=
+    sum(f in F | exists(flow(f,c,p,t)) ) flow(f,c,p,t) <= Demand(c,p,t)
+end-do
+
+forall(f in F, c in C |exists(FlowCap(f,c)) ) do
+    forall(t in T) do
+        transportCap(f,c,t) :=
+        sum(p in P | exists(flow(f,c,p,t)) ) flow(f,c,p,t) <= FlowCap(f,c)
+    end-do
+end-do
+
+
+endTiming("constraint creation")
+
+
+end-model

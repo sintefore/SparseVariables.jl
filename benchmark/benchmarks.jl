@@ -11,7 +11,7 @@ function test_naive(N=10)
     for t in ts
         valid[t] = true
     end
-    @variable(m,x[i=1:N,j=1:N,k=1:N ; haskey(valid,(i,j,k))])
+    @variable(m,x[i=1:N,j=1:N,k=1:N ; haskey(valid,(i,j,k))] ≥ 0)
     return m
 end
 
@@ -49,9 +49,32 @@ end
 # JuMPUtils: simple, efficient, and supports slicing
 function test_sparse_var(N=10)
     m, ts = generate_common(N)
-    SparseVarArray(m, "x", [:a,:b,:c], ts) # TODO: replace with macro when done
+    #SparseVarArray(m, "x", [:a,:b,:c], ts) # TODO: replace with macro when done
+    @sparsevariable(m, x[a,b,c] for (a,b,c) in ts)
     return m
 end
+
+
+
+function benchmark_variables()
+    methods = (test_naive, test_dense, test_sparse_var)
+    N = [10, 20,50]
+    for n in N, method in methods
+        time = @elapsed method(n)
+        println(time)
+    end
+
+end
+
+
+function benchmark_constraints()
+
+end
+
+function benchmark_solving()
+
+end
+
 
 
 # TODO:

@@ -196,6 +196,27 @@ select(dict, f::Function) = filter(f, dict)
 kselect(sa::SparseVarArray, sh_pat::NamedTuple) = select(keys(sa.data), sh_pat, get_index_names(sa))
 select(sa::SparseVarArray, sh_pat::NamedTuple) = Dictionaries.getindices(sa, kselect(sa, sh_pat))
 
+select_test(dict, indices, cache) = cache ? _select_cached(dict, indices) : _select_gen(keys(dict), indices)
+
+
+function _select_cached(sa, pat)
+    indices = Tuple(i for (i,v) in enumerate(pat) if v !== Colon())
+    vals = Tuple(v for v in pat if v !== Colon())
+    
+    if !(indices in keys(sa.index_cache))
+        index = Dict()
+        for v in keys(sa)
+            vred = Tuple(val for (i,val) in enumerate(v) if i in indices)
+            if !(vred in keys(index))
+                index[vred] = []
+            end
+            push!(index[vred], v)  
+        end
+        sa.index_cache[indices] = index
+    end
+    return get(sa.index_cache[indices], vals, [])
+end
+
 function permfromnames(names::NamedTuple, patnames)
     perm = (names[i] for i in patnames)
     rest = setdiff((1:length(names)),perm)
