@@ -1,8 +1,11 @@
 #  Benchmark test problem for a large scale transportation problem
+import Pkg;
+Pkg.activate(@__DIR__)
 
 using JuMP
 using JuMPUtils
-#using JuliaDB
+# using GLPK
+using IndexedTables
 
 struct ProblemParam
     factories
@@ -403,9 +406,7 @@ function test_indexedtable(pp)
 end
 
 
-function test()
-    pp = ProblemParam(10, 100, 20, 10)
-    
+function test( pp = ProblemParam(10, 100, 20, 10))   
     test_dict(pp)
     test_dict_filter(pp)
     test_dict_alt(pp)
@@ -416,8 +417,6 @@ function test()
     #test_indexedtable(pp)
     return
 end
-
-
 
 test()
 
