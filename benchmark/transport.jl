@@ -2,8 +2,7 @@
 
 using JuMP
 using JuMPUtils
-using GLPK
-using JuliaDB
+#using JuliaDB
 
 struct ProblemParam
     factories
@@ -110,29 +109,20 @@ function create_constraints_dict_alt(m, pp)
 
     flow = m[:flow]
     
-    pcap = Dict()
-    for (f,t) in keys(pp.prodcap)
-        pcap[f,t] = AffExpr()
-    end
-    cdem  = Dict()
-    for (c,p,t) in keys(pp.demand)
-        cdem[c,p,t] = AffExpr()
-    end
-    tcap = Dict()
-    for (f,c) in keys(pp.flowcap), t in pp.periods
-        tcap[f,c,t] = AffExpr()
-    end
-
+    pcap = Dict((f,t) => AffExpr() for (f,t) in keys(pp.prodcap))
+    cdem  = Dict((c,p,t) => AffExpr() for (c,p,t) in keys(pp.demand))
+    tcap = Dict((f,c,t) => AffExpr() for (f,c) in keys(pp.flowcap), t in pp.periods)
+    
     for (f,c,p,t) in keys(flow)
         var = flow[f,c,p,t]
         if (f,t) in keys(pp.prodcap)
-            pcap[f,t] += var
+            JuMP.add_to_expression!(pcap[f,t], var)
         end
         if (c,p,t) in keys(pp.demand)
-            cdem[c,p,t] += var
+            JuMP.add_to_expression!(cdem[c,p,t], var)
         end
         if (f,c) in keys(pp.flowcap)
-            tcap[f,c,t] += var
+            JuMP.add_to_expression!(tcap[f,c,t], var)
         end
     end
 
@@ -353,7 +343,7 @@ function test_sparse_cache(pp)
 end
 
 function test_sparse_cache_alt(pp)
-    println("-- Test sparse array with cache --")
+    println("-- Test sparse array with cache (check empty) --")
     m = Model()
     
     t1 = @elapsed create_vars_sparse(m,pp)
@@ -414,16 +404,16 @@ end
 
 
 function test()
-    pp = ProblemParam(10, 1000, 20, 100)
+    pp = ProblemParam(10, 100, 20, 10)
     
-    #test_dict(pp)
+    test_dict(pp)
     test_dict_filter(pp)
     test_dict_alt(pp)
-    #test_sparse_slice(pp)
+    test_sparse_slice(pp)
     test_sparse_select(pp) 
     test_sparse_cache(pp) 
     test_sparse_cache_alt(pp) 
-    test_indexedtable(pp)
+    #test_indexedtable(pp)
     return
 end
 
