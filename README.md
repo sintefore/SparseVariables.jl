@@ -37,6 +37,10 @@ end
 # Inefficient iteration, but 0 contribution for non-existing variables
 @constraint(m, sum(y[c,i] + z[c,i] for c in cars, i in year) <= 300)
 
+# Slicing over selected indices
+@constraint(m, sum(y[:,2000])  <= 300)
+
+
 # Efficient filtering using select syntax
 for i in year
     @constraint(m, sum(car_cost[c,i] * y[c,i] for (c,i) in JU.select(y, :, i)) <= 300)
@@ -47,12 +51,21 @@ end
 ## Solution information
 
 The package defines a structure SolutionTable that supports the Tables.jl interface, allowing 
-easy output of solution values to e.g. a dataframe
+easy output of solution values to e.g. a dataframe or a csv-file
 ```julia
 using DataFrames
+using CSV
 
-df = DataFrame(SolutionTable(y))
+tab = table(y)
+CSV.write("result.csv", tab)
+
+df = dataframe(y)
 ```
+The Tables interface is also implemented for DenseAxisArrray, allowing the functionality to be used also for normal
+dense JuMP-variables. Since the container does not provide index names, these has to be given as explicit arguments.
+
+Note that output to a DataFrame through the dataframe function is only possible if the DataFrames package is loaded
+before JuMPUtils.
 
 
 ## TODO

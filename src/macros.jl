@@ -24,10 +24,20 @@ end
 # Supports two variations:
 #    y = @sparsevariable(m, y[c,i] for (c,i) in idx)
 
-# Consider having sparse variables with restrictions on the index set?
-#   y = @sparsevariable(m, y[cars,year])
-# 
-# TODO: - variable bounds
+"""
+    sparsevariable(args...)
+
+Create a sparse array to hold JuMP variables. The array can be created 
+empty or have variables for a provided index set. The array name will
+be registered with the model.
+
+## Example
+ ```julia
+@sparsevariable(m, x[cars,year])  
+idx = [("volvo",1989), ("nissan",1988), ("nissan", 1991)]
+@sparsevariable(m, x[cars,year] for (cars,year) in idx)
+ ```    
+"""
 macro sparsevariable(args...)
 
     args = _reorder_parameters(args)
@@ -53,14 +63,13 @@ macro sparsevariable(args...)
     
     # For iteration
     itr = ex.args[2]
-    i = itr.args[1]
     I = itr.args[2]
-    insertcall = :(insertvar!($(esc(v)), $i...))
-    JuMP._add_kw_args(insertcall, kw_args)
+    
+    sva = :(SparseVarArray($(esc(m)), $vname, $idx, $(esc(I))))
+    for kw in kw_args
+        push!(sva.args, esc(Expr(:kw, kw.args...)))
+    end
     return quote
-        $(esc(v)) = $(esc(m))[Symbol($vname)] = SparseVarArray($(esc(m)), $vname, $idx, $(esc(I)))
-        # for $i in $(esc(I))
-        #     $insertcall
-        # end
+        $(esc(v)) = $(esc(m))[Symbol($vname)] = $sva
     end
 end

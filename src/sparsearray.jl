@@ -73,19 +73,29 @@ struct SparseArray{T,N, K <: NTuple{N,Any} } <: AbstractSparseArray{T,N}
 end
 
 function SparseArray(d::Dict{K,T}) where {T,N,K <: NTuple{N,Any}}
-    return SparseArray{T,N,K}(Dictionary(d))
+    return SparseArray(Dictionary(d))
+end
+
+function SparseArray(d::Dict{S,T}) where {S,T}
+    dd = Dict( (key,) => val for (key,val) in d)
+    return SparseArray(Dictionary(dd))
 end
 
 function SparseArray{T,N}() where {T,N}
-    return SparseArray{T,N,NTuple{N,Any}}(Dictionary{NTuple{N,Any},T}())
+    return SparseArray(Dictionary{NTuple{N,Any},T}())
 end
 
 function SparseArray{T,N,K}() where {T,N,K <: NTuple{N,Any}}
-    return SparseArray{T,N,K}(Dictionary{K,T}())
+    return SparseArray(Dictionary{K,T}())
 end
 
 _data(sa::SparseArray) = sa.data
 
+"""
+    SparseVarArray{N,T}
+
+    Structure for holding an optimization variable with a sparse structure. 
+"""
 struct SparseVarArray{N,T} <: AbstractSparseArray{VariableRef,N}
     model::Model
     name::String 
@@ -108,8 +118,12 @@ function SparseVarArray{N,T}(model::Model, name::String, ind_names) where {N,T}
 end
 
 function SparseVarArray{N,T}(model::Model, name::String, ind_names, indices::Vector{<:Tuple}; lower_bound = 0, kw_args... ) where {N,T}
-    dict = Dictionary(indices, (createvar(model, name, k; lower_bound, kw_args) for k in indices))
+    dict = Dictionary(indices, (createvar(model, name, k; lower_bound, kw_args...) for k in indices)) 
     model[Symbol(name)] = SparseVarArray{N,T}(model, name, dict, ind_names, Dict())
+end
+
+function SparseVarArray{N,T}(model::Model, name::String, ind_names, indices::Dictionaries.Indices{<:Tuple}; lower_bound = 0, kw_args... ) where {N,T}
+    SparseVarArray{N,T}(model, name, ind_names, collect(indices); lower_bound, kw_args...)
 end
 
 function SparseVarArray(m,n,ind_names)
@@ -127,11 +141,16 @@ _default_index_names(N) = collect(Symbol("i$i") for i=1:N)
 get_index_names(sa::SparseVarArray) = NamedTuple{tuple(sa.index_names...)}(collect(1:length(sa.index_names)))
 set_index_names!(sa::SparseVarArray{N}, new_index_names) where {N} = sa.index_names .= new_index_names
 
+"""
+    insertvar!(var::SparseVarArray{N}, index...; lower_bound = 0, kw_args...)
+
+Insert a new variable with the given index. 
+"""
 function insertvar!(var::SparseVarArray{N}, index...; lower_bound = 0, kw_args...) where {N} 
     var[index] = createvar(var.model, var.name, index; lower_bound, kw_args)
 end
 
-function createvar(model, name, index...; lower_bound = 0, kw_args... )
+function createvar(model, name, index...; lower_bound = 0, kw_args...)
     if !isnothing(lower_bound)
         var = @variable(model, lower_bound = lower_bound)
     else

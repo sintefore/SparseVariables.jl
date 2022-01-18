@@ -15,4 +15,6 @@ Version 0.3.0 (2021-09-08)
 * Sparse variables with index names in construction
 * Support Tables.jl interface for solution variables
 
-
+Version 0.4.3 (2021-11-07)
+--------------------------
+* Support Tables interface also for variables stored in DenseAxisArray
