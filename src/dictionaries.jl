@@ -244,30 +244,29 @@ Works on types because it is used in generated function
 isfixed(t) = true
 isfixed(::Type{T} where T<:Function) = false
 isfixed(::Type{T} where T<:UnitRange) = false
+iscolon(t) = false
+iscolon(::Type{T} where T<:Colon) = true
 
 
 @generated function _getindex(sa::AbstractSparseArray{T,N}, tpl::Tuple) where {T,N}
     lookup = true
+    slice = true
     for t in fieldtypes(tpl)
         if !isfixed(t)
             lookup = false
-            break
+            if !iscolon(t)
+                slice = false
+            end
         end
     end
     
     if lookup
         return :( get(_data(sa), tpl, zero(T)) )
+    elseif !slice
+        return :( retval = select(_data(sa), tpl); length(retval)>0 ? retval : zero(T) )
     else    # Return selection or zero if empty to avoid reduction of empty iterate
         return :( retval = _select_var(sa, tpl); length(retval) > 0 ? retval : zero(T))
-        #return :( retval = _select_gen(keys(sa), tpl); length(retval)>0 ? retval : zero(T) )
     end
 end
 
-
-function _select_var(sa, tpl) 
-    result = []
-    for k in select_test(sa, tpl, true)
-        push!(result, sa[k])
-    end
-    return result
-end
+_select_var(sa, tpl) = getindices(_data(sa), select_test(sa, tpl, true))
