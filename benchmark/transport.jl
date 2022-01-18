@@ -274,7 +274,7 @@ function create_vars_indexedtable(m, pp)
             end
         end
     end
-    var_table = table(F, C, P, T, V, names=[:factory, :customer, :product, :period, :var], pkey=[:factory, :customer, :product, :period])
+    var_table = IndexedTables.table(F, C, P, T, V, names=[:factory, :customer, :product, :period, :var], pkey=[:factory, :customer, :product, :period])
     m[:flow] = var_table
 end
 
@@ -414,7 +414,7 @@ function test( pp = ProblemParam(10, 100, 20, 10))
     test_sparse_select(pp) 
     test_sparse_cache(pp) 
     test_sparse_cache_alt(pp) 
-    #test_indexedtable(pp)
+    test_indexedtable(pp)
     return
 end
 
