@@ -147,7 +147,7 @@ set_index_names!(sa::SparseVarArray{N}, new_index_names) where {N} = sa.index_na
 Insert a new variable with the given index. 
 """
 function insertvar!(var::SparseVarArray{N}, index...; lower_bound = 0, kw_args...) where {N} 
-    var[index] = createvar(var.model, var.name, index; lower_bound, kw_args)
+    var[index] = createvar(var.model, var.name, index; lower_bound, kw_args...)
 end
 
 function createvar(model, name, index...; lower_bound = 0, kw_args...)
@@ -156,7 +156,6 @@ function createvar(model, name, index...; lower_bound = 0, kw_args...)
     else
         var = @variable(model)
     end
-    
     for kw in kw_args
         if kw.first == :binary && kw.second
             set_binary(var)

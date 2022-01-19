@@ -2,7 +2,7 @@ abstract type SolutionTable end
 
 
 Tables.istable(::Type{<:SolutionTable}) = true
-rowacccess(::Type{<:SolutionTable}) = true
+Tables.rowaccess(::Type{<:SolutionTable}) = true
 
 rows(t::SolutionTable) = t
 names(t::SolutionTable) = getfield(t, :names)
