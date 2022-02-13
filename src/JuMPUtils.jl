@@ -6,6 +6,7 @@ using Tables
 using Requires
 
 include("sparsearray.jl")
+include("sparsevararray.jl")
 include("macros.jl")
 include("dictionaries.jl")
 include("tables.jl")
