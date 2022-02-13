@@ -7,7 +7,7 @@ using InteractiveUtils
 # ╔═╡ 9150eed0-89e1-11ec-2363-1d1d3d46c3ff
 begin
 	import Pkg
-	Pkg.activate("c:/_project/Julia/JuMPUtils/blog")
+	Pkg.activate(".")
 
 	using DataFrames 
 	using JuMPUtils
@@ -48,7 +48,7 @@ $W_{f,p} = 0 \implies x_{f,p,c,t} = 0.$
 
 # ╔═╡ 6890dae5-48de-4552-bb51-1dedd0405031
 begin
-	function create_test(nf, nc, np, nt)
+	function create_test(nf, nc, np, nt; demandprob = 0.05, prodprob = 0.2, flowprob = 0.8)
 
 		Random.seed!(42)
 		
@@ -56,10 +56,6 @@ begin
     	C = collect(1:nc)
     	P = collect(1:np)
     	T = collect(1:nt)
-
-    	prodprob = 0.2
-    	demandprob = 0.05
-    	flowprob = 0.8
 
 		D = Dict((c,p,t) => rand() for c in C, p in P, t in T if rand() < demandprob)
     	U = Dict((f,t) => rand() * 100 for f in F, t in T)
@@ -133,23 +129,24 @@ begin
 		end
 		
 		# Constraint setup
+		indices = [(f,c,p,t) for (c,p,t) in keys(D), f in F if W[f,p] == 1]
 
 		# Customer demand
 	    for (c̄,p̄,t̄) in keys(D)
 	        @constraint(m, sum(x[f,c,p,t] for (f,c,p,t) in 
-				filter(i->i[2]==c̄ && i[3]==p̄ && i[4]==t̄, keys(x))) == D[c̄,p̄,t̄])
+				filter(i->i[2]==c̄ && i[3]==p̄ && i[4]==t̄, indices)) == D[c̄,p̄,t̄])
 	    end
 		
 		# Production capacity
 	    for (f̄,t̄) in keys(U)
 	        @constraint(m, sum(x[f,c,p,t] for (f,c,p,t) in 
-				filter(i->i[1]==f̄ && i[4]==t̄, keys(x))) ≤ U[f̄,t̄])
+				filter(i->i[1]==f̄ && i[4]==t̄, indices)) ≤ U[f̄,t̄])
 	    end
 	
 	    # Transport capacity
 	    for (f̄,c̄) in keys(V), t̄ in T
 	    	@constraint(m, sum(x[f,c,p,t] for (f,c,p,t) in  
-				filter(i->i[1]==f̄ && i[2]==c̄ && i[4]==t̄, keys(x))) ≤ V[f̄,c̄])
+				filter(i->i[1]==f̄ && i[2]==c̄ && i[4]==t̄, indices)) ≤ V[f̄,c̄])
 	    end
 
 		return m
@@ -304,10 +301,15 @@ end
 # ╔═╡ 0041a12e-1dd8-48a5-b44b-7fb8ba5dfbb2
 t5 = @timed model_sparse(F,C,P,T,D,U,V,W)
 
+# ╔═╡ 084f9445-27cd-4a36-b031-42b54f934ec8
+md"
+## Varying problem size
+"
+
 # ╔═╡ c49a3599-65fd-442b-b5c9-625b87e05efa
 begin
 	res = DataFrame(Method=Symbol[], NC=Int[], Time=Float64[])
-	for nc in 10:10:100
+	for nc in 5:5:50
 		for method in [model_standard, model_dict, model_index, model_incremental, model_sparse]
 			t = @timed method(create_test(nf, nc, np, nt)...)
 			push!(res,(Symbol(method), nc, t.time))
@@ -320,6 +322,28 @@ res
 
 # ╔═╡ 3bf1a58c-72db-4120-9b64-71a83d65bf87
 plot(res, x=:NC, y=:Time, color=:Method, Geom.point, Geom.line)
+
+# ╔═╡ 67903213-e5e2-4c56-ab32-2c93c8092830
+md"
+## Varying sparsity
+"
+
+# ╔═╡ 1d68c8c0-1dbc-4d8b-97ae-3db1d2b06a4f
+begin
+	sparsity = DataFrame(Method=Symbol[], DP=Float64[], Time=Float64[])
+	for dp in 0.05:0.05:1.0
+		for method in [model_standard, model_dict, model_index, model_incremental, model_sparse]
+			t = @timed method(create_test(5, 20, 10, 20; demandprob=dp)...)
+			push!(sparsity,(Symbol(method), dp, t.time))
+		end
+	end
+end
+
+# ╔═╡ b5dbba7e-6e57-49b8-b277-66e9421fa38b
+sparsity
+
+# ╔═╡ b9e552e8-d10b-40f8-a13c-75919c99563f
+plot(sparsity, x=:DP, y=:Time, color=:Method, Geom.point, Geom.line)
 
 # ╔═╡ deefc30f-4846-49db-8ce8-69b4aec14924
 begin
@@ -360,9 +384,14 @@ plot(large, x=:vars, y=:Time, color=:Method, Geom.point, Geom.line)
 # ╠═10bbfb4d-ca07-4d4f-9c07-9e805b8744bb
 # ╠═80d8a95d-61a3-41f7-bf2a-bf2e26221582
 # ╠═0041a12e-1dd8-48a5-b44b-7fb8ba5dfbb2
+# ╟─084f9445-27cd-4a36-b031-42b54f934ec8
 # ╠═c49a3599-65fd-442b-b5c9-625b87e05efa
 # ╠═3881bb13-7ab7-4b52-bd35-5a9e9d6bce29
 # ╠═3bf1a58c-72db-4120-9b64-71a83d65bf87
+# ╟─67903213-e5e2-4c56-ab32-2c93c8092830
+# ╠═1d68c8c0-1dbc-4d8b-97ae-3db1d2b06a4f
+# ╠═b5dbba7e-6e57-49b8-b277-66e9421fa38b
+# ╠═b9e552e8-d10b-40f8-a13c-75919c99563f
 # ╠═deefc30f-4846-49db-8ce8-69b4aec14924
 # ╠═a6b7741f-b02d-43c2-bc10-0d1a6dbd12e2
 # ╠═d233df91-10cf-4799-b7ed-9db7e6bada8a
