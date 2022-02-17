@@ -4,6 +4,16 @@
 using Markdown
 using InteractiveUtils
 
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+end
+
 # ╔═╡ 9150eed0-89e1-11ec-2363-1d1d3d46c3ff
 begin
 	import Pkg
@@ -11,11 +21,15 @@ begin
 	using DataFrames 
 	using JuMPUtils
 	using JuMP
+	using PlutoUI
 	using AlgebraOfGraphics, CairoMakie
 	using BenchmarkTools
 	using ProgressLogging
 	import Random
 end
+
+# ╔═╡ 4cf9c6d7-0bf0-4bad-930f-6eff2a7d2521
+PlutoUI.TableOfContents()
 
 # ╔═╡ 93dce568-6cac-4c62-bd7c-7e33edaacd8d
 md"
@@ -73,7 +87,7 @@ nf, nc, np, nt = 5, 20, 10 ,100;
  F,C,P,T,D,U,V,W = create_test(nf, nc, np, nt);
 
 # ╔═╡ 57abd933-c541-4df4-9bde-b546f5d183e7
-REPS = 2
+md"Repeat benchmarks $(@bind REPS PlutoUI.Scrubbable(;default=2)) times (more repetition is slower, but gives less noise in results)"
 
 # ╔═╡ 3621ab6a-1c9b-4239-b762-089959ed011c
 md" 
@@ -315,6 +329,7 @@ begin
 	res = DataFrame(Method=Symbol[], NC=Int[], Time=Float64[])
 	@progress for nc in 5:5:50
 		for method in [model_standard, model_dict, model_index, model_incremental, model_sparse]
+			GC.gc()
 			t = [@timed method(create_test(nf, nc, np, nt)...) for _ in 1:REPS]
 			push!(res,(Symbol(method), nc, minimum(x->x.time, t)))
 		end
@@ -345,6 +360,7 @@ begin
 	sparsity = DataFrame(Method=Symbol[], DP=Float64[], Time=Float64[])
 	@progress for dp in 0.05:0.05:1.0
 		for method in [model_standard, model_dict, model_index, model_incremental, model_sparse]
+			GC.gc()
 			t = [@timed method(create_test(5, 20, 10, 20; demandprob=dp)...) for _ in 1:REPS]
 			push!(sparsity,(Symbol(method), dp, minimum(x->x.time, t)))
 		end
@@ -362,6 +378,7 @@ begin
 	large = DataFrame(Method=Symbol[], nc=Int[], vars=Int[], Time=Float64[])
 	@progress for nc in 500:500:5000
 		for method in [model_incremental, model_sparse]
+			GC.gc()
 			t = [@timed method(create_test(nf, nc, np, nt)...) for _ in 1:REPS]
 			push!(large,(Symbol(method), nc, num_variables(first(t).value), minimum(x->x.time,t)))
 		end
@@ -379,12 +396,13 @@ plot(sort!(large, :nc), :nc, :Time)
 
 # ╔═╡ Cell order:
 # ╟─9150eed0-89e1-11ec-2363-1d1d3d46c3ff
+# ╟─4cf9c6d7-0bf0-4bad-930f-6eff2a7d2521
 # ╟─93dce568-6cac-4c62-bd7c-7e33edaacd8d
 # ╟─dfeae97f-76bc-49d8-ad72-bee061af7cd4
 # ╟─6890dae5-48de-4552-bb51-1dedd0405031
 # ╠═10de4874-b081-4e7e-a4d2-14eb3d44dd24
 # ╠═3196b821-559d-418c-9026-32b6af86f4f5
-# ╠═57abd933-c541-4df4-9bde-b546f5d183e7
+# ╟─57abd933-c541-4df4-9bde-b546f5d183e7
 # ╟─3621ab6a-1c9b-4239-b762-089959ed011c
 # ╠═408e9db0-5528-48ef-85f6-65d33ab855a3
 # ╠═a78b435c-4716-40a4-a249-6f6b4067d1c3
