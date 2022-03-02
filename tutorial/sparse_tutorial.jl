@@ -4,17 +4,32 @@
 using Markdown
 using InteractiveUtils
 
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+end
+
 # ╔═╡ 9150eed0-89e1-11ec-2363-1d1d3d46c3ff
 begin
 	import Pkg
-	Pkg.activate(".")
-
+	Pkg.activate(@__DIR__)
 	using DataFrames 
 	using JuMPUtils
 	using JuMP
-	using Gadfly
+	using PlutoUI
+	using AlgebraOfGraphics, CairoMakie
+	using BenchmarkTools
+	using ProgressLogging
 	import Random
 end
+
+# ╔═╡ 4cf9c6d7-0bf0-4bad-930f-6eff2a7d2521
+PlutoUI.TableOfContents()
 
 # ╔═╡ 93dce568-6cac-4c62-bd7c-7e33edaacd8d
 md"
@@ -70,6 +85,9 @@ nf, nc, np, nt = 5, 20, 10 ,100;
 
 # ╔═╡ 3196b821-559d-418c-9026-32b6af86f4f5
  F,C,P,T,D,U,V,W = create_test(nf, nc, np, nt);
+
+# ╔═╡ 57abd933-c541-4df4-9bde-b546f5d183e7
+md"Repeat benchmarks $(@bind REPS PlutoUI.Scrubbable(;default=2)) times (more repetition is slower, but gives less noise in results)"
 
 # ╔═╡ 3621ab6a-1c9b-4239-b762-089959ed011c
 md" 
@@ -271,7 +289,7 @@ begin
 		# Variable creation
 		@sparsevariable(m, x[factory, customer, product, period])
 
-		for (c,p,t) in keys(D), f in F 
+		for f in F , (c,p,t) in keys(D)
 			if W[f,p] == 1 
 				insertvar!(x, f, c, p, t)
 			end
@@ -309,10 +327,11 @@ md"
 # ╔═╡ c49a3599-65fd-442b-b5c9-625b87e05efa
 begin
 	res = DataFrame(Method=Symbol[], NC=Int[], Time=Float64[])
-	for nc in 5:5:50
+	@progress for nc in 5:5:50
 		for method in [model_standard, model_dict, model_index, model_incremental, model_sparse]
-			t = @timed method(create_test(nf, nc, np, nt)...)
-			push!(res,(Symbol(method), nc, t.time))
+			GC.gc()
+			t = [@timed method(create_test(nf, nc, np, nt)...) for _ in 1:REPS]
+			push!(res,(Symbol(method), nc, minimum(x->x.time, t)))
 		end
 	end
 end
@@ -320,8 +339,16 @@ end
 # ╔═╡ 3881bb13-7ab7-4b52-bd35-5a9e9d6bce29
 res
 
-# ╔═╡ 3bf1a58c-72db-4120-9b64-71a83d65bf87
-plot(res, x=:NC, y=:Time, color=:Method, Geom.point, Geom.line)
+# ╔═╡ 5ca68304-0c21-4344-a92b-0594c04674a4
+function plot(df, x=:NC, y=:Time)
+	CairoMakie.activate!(type = "svg")
+	draw(data(df) * 
+		mapping(x, y, color=:Method, marker=:Method) * 
+		(visual(Lines) + visual(Scatter)))
+end
+
+# ╔═╡ 1a32e274-e591-4269-b397-3075f1de0534
+plot(res)
 
 # ╔═╡ 67903213-e5e2-4c56-ab32-2c93c8092830
 md"
@@ -331,10 +358,11 @@ md"
 # ╔═╡ 1d68c8c0-1dbc-4d8b-97ae-3db1d2b06a4f
 begin
 	sparsity = DataFrame(Method=Symbol[], DP=Float64[], Time=Float64[])
-	for dp in 0.05:0.05:1.0
+	@progress for dp in 0.05:0.05:1.0
 		for method in [model_standard, model_dict, model_index, model_incremental, model_sparse]
-			t = @timed method(create_test(5, 20, 10, 20; demandprob=dp)...)
-			push!(sparsity,(Symbol(method), dp, t.time))
+			GC.gc()
+			t = [@timed method(create_test(5, 20, 10, 20; demandprob=dp)...) for _ in 1:REPS]
+			push!(sparsity,(Symbol(method), dp, minimum(x->x.time, t)))
 		end
 	end
 end
@@ -343,32 +371,38 @@ end
 sparsity
 
 # ╔═╡ b9e552e8-d10b-40f8-a13c-75919c99563f
-plot(sparsity, x=:DP, y=:Time, color=:Method, Geom.point, Geom.line)
+plot(sparsity, :DP, :Time)
 
 # ╔═╡ deefc30f-4846-49db-8ce8-69b4aec14924
 begin
 	large = DataFrame(Method=Symbol[], nc=Int[], vars=Int[], Time=Float64[])
-	for nc in 500:500:5000
+	@progress for nc in 500:500:5000
 		for method in [model_incremental, model_sparse]
-			t = @timed method(create_test(nf, nc, np, nt)...)
-			push!(large,(Symbol(method), nc, num_variables(t.value), t.time))
+			GC.gc()
+			t = [@timed method(create_test(nf, nc, np, nt)...) for _ in 1:REPS]
+			push!(large,(Symbol(method), nc, num_variables(first(t).value), minimum(x->x.time,t)))
 		end
 	end
 end
 
 # ╔═╡ a6b7741f-b02d-43c2-bc10-0d1a6dbd12e2
-large
+sort!(large,:vars)
 
 # ╔═╡ d233df91-10cf-4799-b7ed-9db7e6bada8a
-plot(large, x=:vars, y=:Time, color=:Method, Geom.point, Geom.line)
+plot(sort!(large, :vars), :vars, :Time)
+
+# ╔═╡ b60f5894-e281-4a1c-9070-896367f516de
+plot(sort!(large, :nc), :nc, :Time)
 
 # ╔═╡ Cell order:
 # ╟─9150eed0-89e1-11ec-2363-1d1d3d46c3ff
+# ╟─4cf9c6d7-0bf0-4bad-930f-6eff2a7d2521
 # ╟─93dce568-6cac-4c62-bd7c-7e33edaacd8d
 # ╟─dfeae97f-76bc-49d8-ad72-bee061af7cd4
 # ╟─6890dae5-48de-4552-bb51-1dedd0405031
 # ╠═10de4874-b081-4e7e-a4d2-14eb3d44dd24
 # ╠═3196b821-559d-418c-9026-32b6af86f4f5
+# ╟─57abd933-c541-4df4-9bde-b546f5d183e7
 # ╟─3621ab6a-1c9b-4239-b762-089959ed011c
 # ╠═408e9db0-5528-48ef-85f6-65d33ab855a3
 # ╠═a78b435c-4716-40a4-a249-6f6b4067d1c3
@@ -387,7 +421,8 @@ plot(large, x=:vars, y=:Time, color=:Method, Geom.point, Geom.line)
 # ╟─084f9445-27cd-4a36-b031-42b54f934ec8
 # ╠═c49a3599-65fd-442b-b5c9-625b87e05efa
 # ╠═3881bb13-7ab7-4b52-bd35-5a9e9d6bce29
-# ╠═3bf1a58c-72db-4120-9b64-71a83d65bf87
+# ╠═1a32e274-e591-4269-b397-3075f1de0534
+# ╟─5ca68304-0c21-4344-a92b-0594c04674a4
 # ╟─67903213-e5e2-4c56-ab32-2c93c8092830
 # ╠═1d68c8c0-1dbc-4d8b-97ae-3db1d2b06a4f
 # ╠═b5dbba7e-6e57-49b8-b277-66e9421fa38b
@@ -395,3 +430,4 @@ plot(large, x=:vars, y=:Time, color=:Method, Geom.point, Geom.line)
 # ╠═deefc30f-4846-49db-8ce8-69b4aec14924
 # ╠═a6b7741f-b02d-43c2-bc10-0d1a6dbd12e2
 # ╠═d233df91-10cf-4799-b7ed-9db7e6bada8a
+# ╠═b60f5894-e281-4a1c-9070-896367f516de
