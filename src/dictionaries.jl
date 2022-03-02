@@ -196,6 +196,27 @@ select(dict, f::Function) = filter(f, dict)
 kselect(sa::SparseVarArray, sh_pat::NamedTuple) = select(keys(sa.data), sh_pat, get_index_names(sa))
 select(sa::SparseVarArray, sh_pat::NamedTuple) = Dictionaries.getindices(sa, kselect(sa, sh_pat))
 
+select_test(dict, indices, cache) = cache ? _select_cached(dict, indices) : _select_gen(keys(dict), indices)
+
+
+function _select_cached(sa, pat)
+    indices = Tuple(i for (i,v) in enumerate(pat) if v !== Colon())
+    vals = Tuple(v for v in pat if v !== Colon())
+    
+    if !(indices in keys(sa.index_cache))
+        index = Dict()
+        for v in keys(sa)
+            vred = Tuple(val for (i,val) in enumerate(v) if i in indices)
+            if !(vred in keys(index))
+                index[vred] = []
+            end
+            push!(index[vred], v)  
+        end
+        sa.index_cache[indices] = index
+    end
+    return get(sa.index_cache[indices], vals, [])
+end
+
 function permfromnames(names::NamedTuple, patnames)
     perm = (names[i] for i in patnames)
     rest = setdiff((1:length(names)),perm)
@@ -223,20 +244,29 @@ Works on types because it is used in generated function
 isfixed(t) = true
 isfixed(::Type{T} where T<:Function) = false
 isfixed(::Type{T} where T<:UnitRange) = false
+iscolon(t) = false
+iscolon(::Type{T} where T<:Colon) = true
 
 
 @generated function _getindex(sa::AbstractSparseArray{T,N}, tpl::Tuple) where {T,N}
     lookup = true
+    slice = true
     for t in fieldtypes(tpl)
         if !isfixed(t)
             lookup = false
-            break
+            if !iscolon(t)
+                slice = false
+            end
         end
     end
     
     if lookup
         return :( get(_data(sa), tpl, zero(T)) )
-    else    # Return selection or zero if empty to avoid reduction of empty iterate
+    elseif !slice
         return :( retval = select(_data(sa), tpl); length(retval)>0 ? retval : zero(T) )
+    else    # Return selection or zero if empty to avoid reduction of empty iterate
+        return :( retval = _select_var(sa, tpl); length(retval) > 0 ? retval : zero(T))
     end
 end
+
+_select_var(sa, tpl) = getindices(_data(sa), select_test(sa, tpl, true))

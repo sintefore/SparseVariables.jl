@@ -5,11 +5,14 @@ using JuMP
 using Tables
 using Requires
 
-include("sparsedict.jl")
+include("sparsearray.jl")
+include("sparsevararray.jl")
 include("macros.jl")
 include("dictionaries.jl")
 include("tables.jl")
 
+export SparseArray
+export SparseVarArray
 export @sparsevariable
 export insertvar!
 export table

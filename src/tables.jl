@@ -2,7 +2,7 @@ abstract type SolutionTable end
 
 
 Tables.istable(::Type{<:SolutionTable}) = true
-rowacccess(::Type{<:SolutionTable}) = true
+Tables.rowaccess(::Type{<:SolutionTable}) = true
 
 rows(t::SolutionTable) = t
 names(t::SolutionTable) = getfield(t, :names)
@@ -67,10 +67,6 @@ struct SolutionTableDense <: SolutionTable
     index_lookup::Dict
     var::Containers.DenseAxisArray
 end
-
-#macro name(arg)
-#    string(arg)
-#end
 
 function SolutionTableDense(v::Containers.DenseAxisArray{VariableRef,N,Ax,L}, name, colnames...) where {N,Ax,L}
     if length(colnames) < length(axes(v))

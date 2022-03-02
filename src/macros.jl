@@ -1,3 +1,4 @@
+using Base.Meta: isexpr
 
 function _extract_kw(args)
     kw_args =
@@ -6,17 +7,40 @@ function _extract_kw(args)
     return flat_args, kw_args
 end
 
+function _reorder_parameters(args)
+    if !isexpr(args[1], :parameters)
+        return args
+    end
+    args = collect(args)
+    p = popfirst!(args)
+    for arg in p.args
+        @assert arg.head == :kw
+        push!(args, Expr(:(=), arg.args[1], arg.args[2]))
+    end
+    return args
+end
+
 # Create a sparse array to hold JuMP variables
 # Supports two variations:
 #    y = @sparsevariable(m, y[c,i] for (c,i) in idx)
 
-# Consider having sparse variables with restrictions on the index set?
-#   y = @sparsevariable(m, y[cars,year])
-# 
-# TODO: - variable bounds
+"""
+    sparsevariable(args...)
+
+Create a sparse array to hold JuMP variables. The array can be created 
+empty or have variables for a provided index set. The array name will
+be registered with the model.
+
+## Example
+ ```julia
+@sparsevariable(m, x[cars,year])  
+idx = [("volvo",1989), ("nissan",1988), ("nissan", 1991)]
+@sparsevariable(m, x[cars,year] for (cars,year) in idx)
+ ```    
+"""
 macro sparsevariable(args...)
 
-    args = JuMP._reorder_parameters(args)
+    args = _reorder_parameters(args)
     m = args[1]
 
     ex, kw_args = _extract_kw(args[2:end])
