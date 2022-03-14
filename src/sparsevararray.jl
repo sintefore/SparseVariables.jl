@@ -55,6 +55,16 @@ Insert a new variable with the given index.
 """
 function insertvar!(var::SparseVarArray{N}, index...; lower_bound = 0, kw_args...) where {N} 
     var[index] = createvar(var.model, var.name, index; lower_bound, kw_args...)
+    
+    # If active caches, update with new variable
+    for ind in keys(var.index_cache)
+        vred = Tuple(val for (i,val) in enumerate(index) if i in ind)
+        if !(vred in keys(var.index_cache[ind]))
+            var.index_cache[ind][vred] = []
+        end
+        push!(var.index_cache[ind][vred],index)   
+    end
+
 end
 
 function createvar(model, name, index...; lower_bound = 0, kw_args...)

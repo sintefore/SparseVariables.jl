@@ -20,6 +20,7 @@ car_cost = JU.SparseArray(Dict(
     ("bmw", 2001) => 200,
     ("bmw", 2002) => 300
     ))
+car_cost["lotus", 1957] = 500
 
 @testset "Select" begin
     @test JU.select(indices, (:, 1957)) == [lotus]
@@ -82,7 +83,7 @@ end
  
 end
 
-car_cost["lotus", 1957] = 500
+
 @testset "SparseArray" begin
     
     @test typeof(car_cost) == JU.SparseArray{Int64, 2, Tuple{String, Int64}}
@@ -129,6 +130,30 @@ end
     @test length(z[:, begin:2000]) == 1
     @test length(z[:, 2000:end]) == 3
     @test length(z["mazda", 1990:2002]) == 1
+end
+
+@testset "Caching" begin
+    m = Model()
+    @sparsevariable(m, y[c,i] for (c,i) in collect(keys(car_cost)))
+    @sparsevariable(m, w[c,i] for (c,i) in keys(car_cost); binary=true)
+    
+    @constraint(m, con1, sum(y[:,2001]) <= 300)
+    @test length(y.index_cache) == 1
+    @test length(y.index_cache[(2,)]) == 4
+    @test length(y.index_cache[(2,)][(2002,)]) == 1
+
+    @constraint(m, con2, sum(y[:,2000]) <= 500)
+    @test length(constraint_object(con2).func.terms) == 1
+
+    @constraint(m, con3, sum(y[:,:]) <= 1200)
+    @test length(y.index_cache[()][()]) == 5
+
+    # Add extra variable to test cache update
+    insertvar!(y, "nissan", 2000)
+
+    @test length(y.index_cache[(2,)][(2000,)]) == 2
+    @test length(y.index_cache[()][()]) == 6
+
 end
 
 @testset "Tables" begin
