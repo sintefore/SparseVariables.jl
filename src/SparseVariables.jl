@@ -1,4 +1,4 @@
-module JuMPUtils
+module SparseVariables
 
 using Dictionaries
 using JuMP

@@ -1,4 +1,4 @@
-# JuMPUtils.jl
+# SparseVariables.jl
 
 This package contains routines for improved and easier handling of sparse data 
 and sparse arrays of optimizaton variables in JuMP.
@@ -6,17 +6,17 @@ and sparse arrays of optimizaton variables in JuMP.
 ## Usage
 
 ```julia
-using JuMPUtils
+using SparseVariables
 using JuMP
 
-const JU = JuMPUtils
+const SV = SparseVariables
 
 m = Model()
 
 cars = ["ford", "bmw", "opel"]
 year = [2000, 2001, 2002, 2003]
 
-car_cost = JU.SparseArray(Dict(
+car_cost = SV.SparseArray(Dict(
     ("ford", 2000) => 100,
     ("ford", 2001) => 150,
     ("bmw", 2001) => 200,
@@ -43,7 +43,7 @@ end
 
 # Efficient filtering using select syntax
 for i in year
-    @constraint(m, sum(car_cost[c,i] * y[c,i] for (c,i) in JU.select(y, :, i)) <= 300)
+    @constraint(m, sum(car_cost[c,i] * y[c,i] for (c,i) in SV.select(y, :, i)) <= 300)
 end
 
 ```

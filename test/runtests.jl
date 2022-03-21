@@ -1,12 +1,12 @@
 using Base: product
-using Dictionaries
-using Test
-using JuMP
-using DataFrames
-using JuMPUtils
 using Cbc
+using DataFrames
+using Dictionaries
+using JuMP
+using SparseVariables
+using Test
 
-const JU = JuMPUtils
+const SV = SparseVariables
 
 # Test data
 cars = ["ford", "bmw", "opel"]
@@ -14,7 +14,7 @@ year = [2000, 2001, 2002, 2003]
 indices = vec(collect(Iterators.product(cars, year)))
 lotus = ("lotus", 1957)
 push!(indices, lotus)
-car_cost = JU.SparseArray(Dict(
+car_cost = SV.SparseArray(Dict(
     ("ford", 2000) => 100,
     ("ford", 2001) => 150,
     ("bmw", 2001) => 200,
@@ -23,33 +23,33 @@ car_cost = JU.SparseArray(Dict(
 car_cost["lotus", 1957] = 500
 
 @testset "Select" begin
-    @test JU.select(indices, (:, 1957)) == [lotus]
-    @test JU.select(indices, (:, <(2000) )) == [lotus]
-    @test JU.select(indices, (:, <(2000)), (2,1)) == [lotus]
+    @test SV.select(indices, (:, 1957)) == [lotus]
+    @test SV.select(indices, (:, <(2000) )) == [lotus]
+    @test SV.select(indices, (:, <(2000)), (2,1)) == [lotus]
     ntnames = (car=1, year=2)
-    @test JU.select(indices, (;car="lotus"), ntnames) == [lotus]
-    @test JU.select(indices, (;year=1957), ntnames) == [lotus]
-    @test JU.select(indices, (year=1957, car="lotus"), ntnames) == [lotus]
+    @test SV.select(indices, (;car="lotus"), ntnames) == [lotus]
+    @test SV.select(indices, (;year=1957), ntnames) == [lotus]
+    @test SV.select(indices, (year=1957, car="lotus"), ntnames) == [lotus]
 
     isenglish(x) = x in["lotus","aston martin"]
-    @test JU.select(indices, (isenglish, :)) == [lotus]
+    @test SV.select(indices, (isenglish, :)) == [lotus]
 
     complex_query(c,y) = c in ["opel","bmw"] && ((y > 2002) || (y <= 2000))
     complex_query(x) = complex_query(x...) 
-    @test length(JU.select(indices, complex_query)) == 4
+    @test length(SV.select(indices, complex_query)) == 4
 
-    @test JU.select(indices, ("lotus", in([1957, 1962]) )) == [lotus]
+    @test SV.select(indices, ("lotus", in([1957, 1962]) )) == [lotus]
 end
 
 @testset "Permutations" begin
     for N = 1:10
         for K = 1:10
-            @test JU._encode_permutation(JU._decode_permutation(N, K)) == K
+            @test SV._encode_permutation(SV._decode_permutation(N, K)) == K
         end
     end
     for N = 1:100
         t = tuple(collect(N:-1:1)...)
-        @test JU._decode_permutation(N, JU._encode_permutation(t)) == t
+        @test SV._decode_permutation(N, SV._encode_permutation(t)) == t
     end
 end
 
@@ -64,18 +64,18 @@ end
     push!(more_indices, ("lotus", 1957, "white", 21332))
     push!(more_indices, ("rolls royce", 1950, "black", 37219))
 
-    car_vars = JU.SparseVarArray(m,"cars", [:maker,:year,:color,:kms])
-    @test typeof(car_vars) == JuMPUtils.SparseVarArray{4, Tuple{Any, Any, Any, Any}}
-    JU.set_index_names!(car_vars, (:maker,:year,:color,:kms))
-    @test JU.get_index_names(car_vars) == (maker = 1, year = 2, color = 3, kms = 4)
+    car_vars = SV.SparseVarArray(m,"cars", [:maker,:year,:color,:kms])
+    @test typeof(car_vars) == SV.SparseVarArray{4, Tuple{Any, Any, Any, Any}}
+    SV.set_index_names!(car_vars, (:maker,:year,:color,:kms))
+    @test SV.get_index_names(car_vars) == (maker = 1, year = 2, color = 3, kms = 4)
 
     for c in more_indices
-        JU.insertvar!(car_vars,c...)
+        SV.insertvar!(car_vars,c...)
     end
 
-    @test length( JU.kselect(car_vars,(year= <=(1960), maker= x->occursin(" ", x)))) == 1 #rolls royce
-    @test length( JU.kselect(car_vars,(;maker="lotus"))) == 1 # lotus
-    for (c,y,clr,km) in JU.kselect(car_vars, (;year= <(1960)))
+    @test length( SV.kselect(car_vars,(year= <=(1960), maker= x->occursin(" ", x)))) == 1 #rolls royce
+    @test length( SV.kselect(car_vars,(;maker="lotus"))) == 1 # lotus
+    for (c,y,clr,km) in SV.kselect(car_vars, (;year= <(1960)))
         @test y < 1960
     end
     c = @constraint(m, sum(car_vars[(;year= <(1960))]) <= 1)
@@ -86,7 +86,7 @@ end
 
 @testset "SparseArray" begin
     
-    @test typeof(car_cost) == JU.SparseArray{Int64, 2, Tuple{String, Int64}}
+    @test typeof(car_cost) == SV.SparseArray{Int64, 2, Tuple{String, Int64}}
     @test length(car_cost) == 5
 
     @test car_cost["bmw", 2001] == 200
@@ -99,11 +99,11 @@ end
 @testset "SparseVarArray" begin
     m = Model()
     @sparsevariable(m, y[c,i] for (c,i) in collect(keys(car_cost)))
-    @test typeof(y) == JU.SparseVarArray{2 ,Tuple{String, Int}}
+    @test typeof(y) == SV.SparseVarArray{2 ,Tuple{String, Int}}
    
     @sparsevariable(m, w[c,i] for (c,i) in keys(car_cost); binary=true)
-    @test typeof(w) == JU.SparseVarArray{2 ,Tuple{String, Int}}
-    @test count(JuMP.is_binary(w[c,i]) for (c,i) in JU.select(w,"bmw",:)) == 2
+    @test typeof(w) == SV.SparseVarArray{2 ,Tuple{String, Int}}
+    @test count(JuMP.is_binary(w[c,i]) for (c,i) in SV.select(w,"bmw",:)) == 2
   
     @sparsevariable(m, z[c,i])
     @test length(z) == 0
@@ -115,7 +115,7 @@ end
     @constraint(m, con1, sum(y[c,i] + z[c,i] for c in cars, i in year) <= 300)
     @test length(constraint_object(con1).func.terms) == 5
 
-    @constraint(m, con2[i in year], sum(car_cost[c,i] * y[c,i] for (c,i) in JU.select(y, :, i)) <= 300)
+    @constraint(m, con2[i in year], sum(car_cost[c,i] * y[c,i] for (c,i) in SV.select(y, :, i)) <= 300)
     @test length(constraint_object(con2[2001]).func.terms) == 2
     
     @objective(m, Max, sum(z[c,i] + 2y[c,i] for c in cars, i in year))
@@ -165,7 +165,7 @@ end
         insertvar!(z, c, 2002)
     end
     @constraint(m, con1, sum(y[c,i] + z[c,i] for c in cars, i in year) <= 300)
-    @constraint(m, con2[i in year], sum(car_cost[c,i] * y[c,i] for (c,i) in JU.select(y, :, i)) <= 300)
+    @constraint(m, con2[i in year], sum(car_cost[c,i] * y[c,i] for (c,i) in SV.select(y, :, i)) <= 300)
 
     for c in cars, y in year
         @constraint(m, u[c,y] <= 1)
@@ -179,16 +179,16 @@ end
     optimize!(m)
 
     tab = table(y)
-    @test typeof(tab) == JU.SolutionTableSparse
+    @test typeof(tab) == SV.SolutionTableSparse
 
     @test length(tab) == 5
 
     r = first(tab)
-    @test typeof(r) == JU.SolutionRow
+    @test typeof(r) == SV.SolutionRow
     @test r.car == "bmw"
 
     t2 = table(u, :u, :car, :year)
-    @test typeof(t2) == JU.SolutionTableDense
+    @test typeof(t2) == SV.SolutionTableDense
     @test length(t2) == 12
     rows = collect(t2)
     @test rows[11].year == 2003
