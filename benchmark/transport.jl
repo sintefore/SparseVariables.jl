@@ -3,7 +3,7 @@ import Pkg;
 Pkg.activate(@__DIR__)
 
 using JuMP
-using JuMPUtils
+using SparseVariables
 # using GLPK
 using IndexedTables
 
@@ -187,17 +187,17 @@ function create_constraints_sparse_select(m, pp)
     
     # Production capacity
     for (f,t) in keys(pp.prodcap)
-        @constraint(m, sum(flow[f,c,p,t] for (f,c,p,t) in JuMPUtils.select(flow, f,:,:,t; cache=false)) ≤ pp.prodcap[f,t])
+        @constraint(m, sum(flow[f,c,p,t] for (f,c,p,t) in SparseVariables.select(flow, f,:,:,t; cache=false)) ≤ pp.prodcap[f,t])
     end
 
     # Customer demand
     for (c,p,t) in keys(pp.demand)
-        @constraint(m, sum(flow[f,p,c,t] for (f,c,p,t) in JuMPUtils.select(flow, :,c,p,t; cache=false)) ≤ pp.demand[c,p,t])
+        @constraint(m, sum(flow[f,p,c,t] for (f,c,p,t) in SparseVariables.select(flow, :,c,p,t; cache=false)) ≤ pp.demand[c,p,t])
     end
 
     # Transport capacity
     for (f,c) in keys(pp.flowcap), t in pp.periods
-        @constraint(m, sum(flow[f,p,c,t] for (f,p,c,t) in JuMPUtils.select(flow, f,c,:,t; cache=false)) ≤ pp.flowcap[f,c])
+        @constraint(m, sum(flow[f,p,c,t] for (f,p,c,t) in SparseVariables.select(flow, f,c,:,t; cache=false)) ≤ pp.flowcap[f,c])
     end
 
 end
@@ -208,17 +208,17 @@ function create_constraints_sparse_cache(m, pp)
     
     # Production capacity
     for (f,t) in keys(pp.prodcap)
-        @constraint(m, sum(flow[f,c,p,t] for (f,c,p,t) in JuMPUtils.select(flow, f,:,:,t)) ≤ pp.prodcap[f,t])
+        @constraint(m, sum(flow[f,c,p,t] for (f,c,p,t) in SparseVariables.select(flow, f,:,:,t)) ≤ pp.prodcap[f,t])
     end
 
     # Customer demand
     for (c,p,t) in keys(pp.demand)
-        @constraint(m, sum(flow[f,p,c,t] for (f,c,p,t) in JuMPUtils.select(flow, :,c,p,t)) ≤ pp.demand[c,p,t])
+        @constraint(m, sum(flow[f,p,c,t] for (f,c,p,t) in SparseVariables.select(flow, :,c,p,t)) ≤ pp.demand[c,p,t])
     end
 
     # Transport capacity
     for (f,c) in keys(pp.flowcap), t in pp.periods
-        @constraint(m, sum(flow[f,p,c,t] for (f,p,c,t) in JuMPUtils.select(flow, f,c,:,t)) ≤ pp.flowcap[f,c])
+        @constraint(m, sum(flow[f,p,c,t] for (f,p,c,t) in SparseVariables.select(flow, f,c,:,t)) ≤ pp.flowcap[f,c])
     end
 
 end
@@ -229,7 +229,7 @@ function create_constraints_sparse_cache_alt(m, pp)
     
     # Production capacity
     for (f,t) in keys(pp.prodcap)
-        idx = JuMPUtils.select(flow, f,:,:,t)
+        idx = SparseVariables.select(flow, f,:,:,t)
         if !isempty(idx)
             @constraint(m, sum(flow[f,c,p,t] for (f,c,p,t) in idx) ≤ pp.prodcap[f,t])
         end
@@ -237,7 +237,7 @@ function create_constraints_sparse_cache_alt(m, pp)
 
     # Customer demand
     for (c,p,t) in keys(pp.demand)
-        idx = JuMPUtils.select(flow, :,c,p,t)
+        idx = SparseVariables.select(flow, :,c,p,t)
         if !isempty(idx)
             @constraint(m, sum(flow[f,p,c,t] for (f,c,p,t) in idx) ≤ pp.demand[c,p,t])
         end
@@ -245,7 +245,7 @@ function create_constraints_sparse_cache_alt(m, pp)
 
     # Transport capacity
     for (f,c) in keys(pp.flowcap), t in pp.periods
-        idx = JuMPUtils.select(flow, f,c,:,t)
+        idx = SparseVariables.select(flow, f,c,:,t)
         if !isempty(idx)
             @constraint(m, sum(flow[f,p,c,t] for (f,p,c,t) in idx) ≤ pp.flowcap[f,c])
         end

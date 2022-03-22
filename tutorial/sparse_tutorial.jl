@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.18.0
+# v0.18.4
 
 using Markdown
 using InteractiveUtils
@@ -19,7 +19,7 @@ begin
 	import Pkg
 	Pkg.activate(@__DIR__)
 	using DataFrames 
-	using JuMPUtils
+	using SparseVariables
 	using JuMP
 	using PlutoUI
 	using AlgebraOfGraphics, CairoMakie
@@ -278,7 +278,7 @@ t4 = @timed model_incremental(F,C,P,T,D,U,V,W)
 
 # ╔═╡ 10bbfb4d-ca07-4d4f-9c07-9e805b8744bb
 md"
-## Using SparseOptUtil.jl
+## Using SparseVariables.jl
 "
 
 # ╔═╡ 80d8a95d-61a3-41f7-bf2a-bf2e26221582
@@ -415,7 +415,7 @@ plot(sort!(large, :nc), :nc, :Time)
 # ╠═09d44792-82de-4b2a-9cbd-605d243dab80
 # ╠═759cb8ed-5d23-41d9-90cd-d734fea98c0b
 # ╠═a17d8b7e-c02e-41b3-bbdf-d8dc018022c4
-# ╠═10bbfb4d-ca07-4d4f-9c07-9e805b8744bb
+# ╟─10bbfb4d-ca07-4d4f-9c07-9e805b8744bb
 # ╠═80d8a95d-61a3-41f7-bf2a-bf2e26221582
 # ╠═0041a12e-1dd8-48a5-b44b-7fb8ba5dfbb2
 # ╟─084f9445-27cd-4a36-b031-42b54f934ec8
