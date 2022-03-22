@@ -1,3 +1,10 @@
+import Pkg;
+Pkg.activate(@__DIR__)
+
+using IndexedTables
+using JuMP
+using SparseVariables
+
 function generate_common(N)
     m = Model()
     ts = collect(zip(1:N,1:N,1:N))
@@ -75,7 +82,7 @@ function benchmark_solving()
 
 end
 
-
+benchmark_variables()
 
 # TODO:
 # * test constraint construction time with slicing and manual workarounds
