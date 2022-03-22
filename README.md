@@ -65,7 +65,7 @@ The Tables interface is also implemented for DenseAxisArrray, allowing the funct
 dense JuMP-variables. Since the container does not provide index names, these has to be given as explicit arguments.
 
 Note that output to a DataFrame through the dataframe function is only possible if the DataFrames package is loaded
-before JuMPUtils.
+before SparseVariables.
 
 
 ## TODO

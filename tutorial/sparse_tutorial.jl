@@ -19,7 +19,7 @@ begin
 	import Pkg
 	Pkg.activate(@__DIR__)
 	using DataFrames 
-	using JuMPUtils
+	using SparseVariables
 	using JuMP
 	using PlutoUI
 	using AlgebraOfGraphics, CairoMakie

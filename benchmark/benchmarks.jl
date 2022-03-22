@@ -46,7 +46,7 @@ function test_dict(N=10)
     return m
 end
 
-# JuMPUtils: simple, efficient, and supports slicing
+# SparseVariables: simple, efficient, and supports slicing
 function test_sparse_var(N=10)
     m, ts = generate_common(N)
     #SparseVarArray(m, "x", [:a,:b,:c], ts) # TODO: replace with macro when done
