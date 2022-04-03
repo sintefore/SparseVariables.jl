@@ -70,11 +70,9 @@ function benchmark_variables()
     end
 end
 
-function benchmark_constraints()
-end
+function benchmark_constraints() end
 
-function benchmark_solving()
-end
+function benchmark_solving() end
 
 benchmark_variables()
 
