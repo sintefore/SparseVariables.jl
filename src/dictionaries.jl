@@ -273,10 +273,10 @@ iscolon(::Type{T} where {T<:Colon}) = true
     if lookup
         return :(get(_data(sa), tpl, zero(T)))
     elseif !slice
-        return :(retval = select(_data(sa), tpl); 
+        return :(retval = select(_data(sa), tpl);
         length(retval) > 0 ? retval : zero(T))
     else    # Return selection or zero if empty to avoid reduction of empty iterate
-        return :(retval = _select_var(sa, tpl); 
+        return :(retval = _select_var(sa, tpl);
         length(retval) > 0 ? retval : zero(T))
     end
 end
