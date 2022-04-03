@@ -1,8 +1,7 @@
 using Base.Meta: isexpr
 
 function _extract_kw(args)
-    kw_args =
-        filter(x -> Meta.isexpr(x, :(=)), collect(args))
+    kw_args = filter(x -> Meta.isexpr(x, :(=)), collect(args))
     flat_args = filter(x -> !Meta.isexpr(x, :(=)), collect(args))
     return flat_args, kw_args
 end
@@ -39,7 +38,6 @@ idx = [("volvo",1989), ("nissan",1988), ("nissan", 1991)]
  ```    
 """
 macro sparsevariable(args...)
-
     args = _reorder_parameters(args)
     m = args[1]
 
@@ -50,21 +48,23 @@ macro sparsevariable(args...)
         v = ex.args[1]  # variable    
         vname = string(v)
         idx = ex.args[2:end]
-        dim = length(idx)  
+        dim = length(idx)
         return quote
-            $(esc(v)) = $(esc(m))[Symbol($vname)] = SparseVarArray($(esc(m)), $vname, $idx)
-        end    
+            $(esc(v)) =
+                $(esc(m))[Symbol($vname)] =
+                    SparseVarArray($(esc(m)), $vname, $idx)
+        end
     end
 
     v = ex.args[1].args[1]  # variable
     vname = string(v)
     idx = ex.args[1].args[2:end]
     dim = length(idx)
-    
+
     # For iteration
     itr = ex.args[2]
     I = itr.args[2]
-    
+
     sva = :(SparseVarArray($(esc(m)), $vname, $idx, $(esc(I))))
     for kw in kw_args
         push!(sva.args, esc(Expr(:kw, kw.args...)))

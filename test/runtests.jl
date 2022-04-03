@@ -14,40 +14,42 @@ year = [2000, 2001, 2002, 2003]
 indices = vec(collect(Iterators.product(cars, year)))
 lotus = ("lotus", 1957)
 push!(indices, lotus)
-car_cost = SV.SparseArray(Dict(
-    ("ford", 2000) => 100,
-    ("ford", 2001) => 150,
-    ("bmw", 2001) => 200,
-    ("bmw", 2002) => 300
-    ))
+car_cost = SV.SparseArray(
+    Dict(
+        ("ford", 2000) => 100,
+        ("ford", 2001) => 150,
+        ("bmw", 2001) => 200,
+        ("bmw", 2002) => 300,
+    ),
+)
 car_cost["lotus", 1957] = 500
 
 @testset "Select" begin
     @test SV.select(indices, (:, 1957)) == [lotus]
-    @test SV.select(indices, (:, <(2000) )) == [lotus]
-    @test SV.select(indices, (:, <(2000)), (2,1)) == [lotus]
-    ntnames = (car=1, year=2)
-    @test SV.select(indices, (;car="lotus"), ntnames) == [lotus]
-    @test SV.select(indices, (;year=1957), ntnames) == [lotus]
-    @test SV.select(indices, (year=1957, car="lotus"), ntnames) == [lotus]
+    @test SV.select(indices, (:, <(2000))) == [lotus]
+    @test SV.select(indices, (:, <(2000)), (2, 1)) == [lotus]
+    ntnames = (car = 1, year = 2)
+    @test SV.select(indices, (; car = "lotus"), ntnames) == [lotus]
+    @test SV.select(indices, (; year = 1957), ntnames) == [lotus]
+    @test SV.select(indices, (year = 1957, car = "lotus"), ntnames) == [lotus]
 
-    isenglish(x) = x in["lotus","aston martin"]
+    isenglish(x) = x in ["lotus", "aston martin"]
     @test SV.select(indices, (isenglish, :)) == [lotus]
 
-    complex_query(c,y) = c in ["opel","bmw"] && ((y > 2002) || (y <= 2000))
-    complex_query(x) = complex_query(x...) 
+    complex_query(c, y) = c in ["opel", "bmw"] && ((y > 2002) || (y <= 2000))
+    complex_query(x) = complex_query(x...)
     @test length(SV.select(indices, complex_query)) == 4
 
-    @test SV.select(indices, ("lotus", in([1957, 1962]) )) == [lotus]
+    @test SV.select(indices, ("lotus", in([1957, 1962]))) == [lotus]
 end
 
 @testset "Permutations" begin
-    for N = 1:10
-        for K = 1:10
+    for N in 1:10
+        for K in 1:10
             @test SV._encode_permutation(SV._decode_permutation(N, K)) == K
         end
     end
-    for N = 1:100
+    for N in 1:100
         t = tuple(collect(N:-1:1)...)
         @test SV._decode_permutation(N, SV._encode_permutation(t)) == t
     end
@@ -56,72 +58,80 @@ end
 @testset "Named select" begin
     m = Model()
     N = 998
-    more_indices = unique(zip(
-        rand(["bmw","ford","opel","mazda","volvo"], N),
-        rand(1980:2021, N),
-        rand(["red","green","black","blue","gray"], N),
-        rand(1000:250_000, N)));
+    more_indices = unique(
+        zip(
+            rand(["bmw", "ford", "opel", "mazda", "volvo"], N),
+            rand(1980:2021, N),
+            rand(["red", "green", "black", "blue", "gray"], N),
+            rand(1000:250_000, N),
+        ),
+    )
     push!(more_indices, ("lotus", 1957, "white", 21332))
     push!(more_indices, ("rolls royce", 1950, "black", 37219))
 
-    car_vars = SV.SparseVarArray(m,"cars", [:maker,:year,:color,:kms])
-    @test typeof(car_vars) == SV.SparseVarArray{4, Tuple{Any, Any, Any, Any}}
-    SV.set_index_names!(car_vars, (:maker,:year,:color,:kms))
-    @test SV.get_index_names(car_vars) == (maker = 1, year = 2, color = 3, kms = 4)
+    car_vars = SV.SparseVarArray(m, "cars", [:maker, :year, :color, :kms])
+    @test typeof(car_vars) == SV.SparseVarArray{4,Tuple{Any,Any,Any,Any}}
+    SV.set_index_names!(car_vars, (:maker, :year, :color, :kms))
+    @test SV.get_index_names(car_vars) ==
+          (maker = 1, year = 2, color = 3, kms = 4)
 
     for c in more_indices
-        SV.insertvar!(car_vars,c...)
+        SV.insertvar!(car_vars, c...)
     end
 
-    @test length( SV.kselect(car_vars,(year= <=(1960), maker= x->occursin(" ", x)))) == 1 #rolls royce
-    @test length( SV.kselect(car_vars,(;maker="lotus"))) == 1 # lotus
-    for (c,y,clr,km) in SV.kselect(car_vars, (;year= <(1960)))
+    @test length(
+        SV.kselect(car_vars, (year = <=(1960), maker = x -> occursin(" ", x))),
+    ) == 1 #rolls royce
+    @test length(SV.kselect(car_vars, (; maker = "lotus"))) == 1 # lotus
+    for (c, y, clr, km) in SV.kselect(car_vars, (; year = <(1960)))
         @test y < 1960
     end
-    c = @constraint(m, sum(car_vars[(;year= <(1960))]) <= 1)
+    c = @constraint(m, sum(car_vars[(; year = <(1960))]) <= 1)
     @test typeof(c) <: ConstraintRef
- 
 end
 
-
 @testset "SparseArray" begin
-    
-    @test typeof(car_cost) == SV.SparseArray{Int64, 2, Tuple{String, Int64}}
+    @test typeof(car_cost) == SV.SparseArray{Int64,2,Tuple{String,Int64}}
     @test length(car_cost) == 5
 
     @test car_cost["bmw", 2001] == 200
     @test car_cost["bmw", 2003] == 0
-   
+
     @test length(car_cost) == 5
     @test car_cost["lotus", 1957] == 500
 end
 
 @testset "SparseVarArray" begin
     m = Model()
-    @sparsevariable(m, y[c,i] for (c,i) in collect(keys(car_cost)))
-    @test typeof(y) == SV.SparseVarArray{2 ,Tuple{String, Int}}
-   
-    @sparsevariable(m, w[c,i] for (c,i) in keys(car_cost); binary=true)
-    @test typeof(w) == SV.SparseVarArray{2 ,Tuple{String, Int}}
-    @test count(JuMP.is_binary(w[c,i]) for (c,i) in SV.select(w,"bmw",:)) == 2
-  
-    @sparsevariable(m, z[c,i])
+    @sparsevariable(m, y[c, i] for (c, i) in collect(keys(car_cost)))
+    @test typeof(y) == SV.SparseVarArray{2,Tuple{String,Int}}
+
+    @sparsevariable(m, w[c, i] for (c, i) in keys(car_cost); binary = true)
+    @test typeof(w) == SV.SparseVarArray{2,Tuple{String,Int}}
+    @test count(JuMP.is_binary(w[c, i]) for (c, i) in SV.select(w, "bmw", :)) ==
+          2
+
+    @sparsevariable(m, z[c, i])
     @test length(z) == 0
     for c in ["opel", "tesla", "nikola"]
         insertvar!(z, c, 2002)
     end
     @test length(z) == 3
 
-    @constraint(m, con1, sum(y[c,i] + z[c,i] for c in cars, i in year) <= 300)
+    @constraint(m, con1, sum(y[c, i] + z[c, i] for c in cars, i in year) <= 300)
     @test length(constraint_object(con1).func.terms) == 5
 
-    @constraint(m, con2[i in year], sum(car_cost[c,i] * y[c,i] for (c,i) in SV.select(y, :, i)) <= 300)
+    @constraint(
+        m,
+        con2[i in year],
+        sum(car_cost[c, i] * y[c, i] for (c, i) in SV.select(y, :, i)) <= 300
+    )
     @test length(constraint_object(con2[2001]).func.terms) == 2
-    
-    @objective(m, Max, sum(z[c,i] + 2y[c,i] for c in cars, i in year))
+
+    @objective(m, Max, sum(z[c, i] + 2y[c, i] for c in cars, i in year))
     @test length(objective_function(m).terms) == 5
 
-    c =  @constraint(m, [i in year], sum(y[:, i]) <= 1)
+    c = @constraint(m, [i in year], sum(y[:, i]) <= 1)
     @test isa(c, JuMP.Containers.DenseAxisArray)
     @test isa(first(c), ConstraintRef)
     @test length(c) == length(year)
@@ -134,18 +144,18 @@ end
 
 @testset "Caching" begin
     m = Model()
-    @sparsevariable(m, y[c,i] for (c,i) in collect(keys(car_cost)))
-    @sparsevariable(m, w[c,i] for (c,i) in keys(car_cost); binary=true)
-    
-    @constraint(m, con1, sum(y[:,2001]) <= 300)
+    @sparsevariable(m, y[c, i] for (c, i) in collect(keys(car_cost)))
+    @sparsevariable(m, w[c, i] for (c, i) in keys(car_cost); binary = true)
+
+    @constraint(m, con1, sum(y[:, 2001]) <= 300)
     @test length(y.index_cache) == 1
     @test length(y.index_cache[(2,)]) == 4
     @test length(y.index_cache[(2,)][(2002,)]) == 1
 
-    @constraint(m, con2, sum(y[:,2000]) <= 500)
+    @constraint(m, con2, sum(y[:, 2000]) <= 500)
     @test length(constraint_object(con2).func.terms) == 1
 
-    @constraint(m, con3, sum(y[:,:]) <= 1200)
+    @constraint(m, con3, sum(y[:, :]) <= 1200)
     @test length(y.index_cache[()][()]) == 5
 
     # Add extra variable to test cache update
@@ -153,25 +163,33 @@ end
 
     @test length(y.index_cache[(2,)][(2000,)]) == 2
     @test length(y.index_cache[()][()]) == 6
-
 end
 
 @testset "Tables" begin
     m = Model()
-    @sparsevariable(m, y[car,year] for (car,year) in collect(keys(car_cost)))
-    @sparsevariable(m, z[car,year])
+    @sparsevariable(m, y[car, year] for (car, year) in collect(keys(car_cost)))
+    @sparsevariable(m, z[car, year])
     @variable(m, u[cars, year])
     for c in ["opel", "tesla", "nikola"]
         insertvar!(z, c, 2002)
     end
-    @constraint(m, con1, sum(y[c,i] + z[c,i] for c in cars, i in year) <= 300)
-    @constraint(m, con2[i in year], sum(car_cost[c,i] * y[c,i] for (c,i) in SV.select(y, :, i)) <= 300)
+    @constraint(m, con1, sum(y[c, i] + z[c, i] for c in cars, i in year) <= 300)
+    @constraint(
+        m,
+        con2[i in year],
+        sum(car_cost[c, i] * y[c, i] for (c, i) in SV.select(y, :, i)) <= 300
+    )
 
     for c in cars, y in year
-        @constraint(m, u[c,y] <= 1)
+        @constraint(m, u[c, y] <= 1)
     end
 
-    @objective(m, Max, sum(z[c,i] + 2y[c,i] for c in cars, i in year) + sum(u[c,2002] for c in cars))
+    @objective(
+        m,
+        Max,
+        sum(z[c, i] + 2y[c, i] for c in cars, i in year) +
+        sum(u[c, 2002] for c in cars)
+    )
 
     set_optimizer(m, Cbc.Optimizer)
     set_optimizer_attribute(m, MOI.Silent(), true)
@@ -196,4 +214,3 @@ end
     df = dataframe(u, :u, :car, :year)
     @test first(df.car) == "ford"
 end
- 
