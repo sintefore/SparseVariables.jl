@@ -91,7 +91,7 @@ end
 end
 
 @testset "SparseArray" begin
-    @test typeof(car_cost) == SV.SparseArray{Int64,2,Tuple{String,Int64}}
+    @test typeof(car_cost) == SV.SparseArray{Int,2,Tuple{String,Int}}
     @test length(car_cost) == 5
 
     @test car_cost["bmw", 2001] == 200

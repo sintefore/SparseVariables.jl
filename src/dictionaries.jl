@@ -12,7 +12,6 @@ make_filter_fun(c, pos) = x -> x[pos] == c
 make_filter_fun(c::Base.Fix2, pos) = x -> c(x[pos])
 make_filter_fun(c::Function, pos) = x -> c(x[pos])
 make_filter_fun(c::Colon, pos) = x -> true
-
 make_filter_fun(c) = x -> x == c
 make_filter_fun(c::Base.Fix2) = x -> c(x)
 make_filter_fun(c::Function) = x -> c(x)
@@ -126,7 +125,7 @@ Return integer encoding the `permutation` (as base N)
 # encode_permutation(permutation) = sum((permutation .- 1) .* _base_factors(Val(length(permutation))))
 @generated function _encode_permutation(permutation::NTuple{N,M}) where {N,M}
     s = :(0)
-    if N > 15 # Int64 overflows at N=16
+    if will_overflow(N)
         N = big(N)
     end
     for i in 1:N
@@ -153,9 +152,11 @@ function _decode_permutation(N, K)
     return tuple(perm...)
 end
 
+will_overflow(N) = sum(big(n)^N for n in 1:N) > typemax(Int)
+
 @generated function _base_factors(::Val{N}) where {N}
     base_factors = []
-    if N > 15 # Int64 overflows at N=16
+    if will_overflow(N)
         N = big(N)
     end
     for i in N:-1:1
