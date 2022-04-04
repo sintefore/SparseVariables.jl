@@ -12,8 +12,6 @@ make_filter_fun(c, pos) = x -> x[pos] == c
 make_filter_fun(c::Base.Fix2, pos) = x -> c(x[pos])
 make_filter_fun(c::Function, pos) = x -> c(x[pos])
 make_filter_fun(c::Colon, pos) = x -> true
-
-
 make_filter_fun(c) = x -> x == c
 make_filter_fun(c::Base.Fix2) = x -> c(x)
 make_filter_fun(c::Function) = x -> c(x)
@@ -33,7 +31,6 @@ function recursive_filter(fs, data)
     end
 end
 
-
 """
     indices_fun(some_tuple)
 
@@ -41,7 +38,7 @@ Return functions to be used for filtering from a tuple following the format
 supported by `make_filter_fun`
 """
 function indices_fun(some_tuple)
-    (make_filter_fun(v, pos) for (pos, v) in enumerate(some_tuple))
+    return (make_filter_fun(v, pos) for (pos, v) in enumerate(some_tuple))
 end
 
 """
@@ -50,9 +47,8 @@ end
 Filter iterable data a by tuple `pattern` by row (slow)
 """
 function _select_rowwise(a, pattern)
-    filter(x -> reduce(&, f(x) for f in indices_fun(pattern)), a)
+    return filter(x -> reduce(&, f(x) for f in indices_fun(pattern)), a)
 end
-
 
 """
     _select_colwise(a, pattern) 
@@ -60,7 +56,7 @@ end
 Filter iterable data a by tuple `pattern` by column (recursively)
 """
 function _select_colwise(a, pattern)
-    recursive_filter(indices_fun(pattern), a)
+    return recursive_filter(indices_fun(pattern), a)
 end
 
 """
@@ -70,7 +66,7 @@ Filter iterable data `a` by tuple `pattern` by row, using generated function for
 See more straight-forward implementations `_select_rowwise` and `_select_colwise` for reference.   
 """
 function _select_gen(a, pattern)
-    filter(x -> _select_generated(pattern, x), a)
+    return filter(x -> _select_generated(pattern, x), a)
 end
 
 """
@@ -91,7 +87,7 @@ _select_gen_perm(a, pat, (3,2,1)) # faster
 """
 function _select_gen_perm(a, pattern, perm)
     p = Permutation(perm)
-    filter(x -> _select_gen_permute(pattern, x, p), a)
+    return filter(x -> _select_gen_permute(pattern, x, p), a)
 end
 
 """
@@ -103,14 +99,15 @@ _select_generated(pat, x) = _select_generated(pat, x, Val(length(pat)))
 
 @generated function _select_generated(pat, x, ::Val{N}) where {N}
     ex = :(true)
-    for i = 1:N
+    for i in 1:N
         ex = :($ex && make_filter_fun(pat[$i])(x[$i]))
     end
     return :($ex)
 end
 
-_select_gen_permute(pat, x, permutation) =
-    _select_gen_permute(pat, x, permutation, Val(length(pat)))
+function _select_gen_permute(pat, x, permutation)
+    return _select_gen_permute(pat, x, permutation, Val(length(pat)))
+end
 
 """
     Permutation{N,K}
@@ -131,7 +128,7 @@ Return integer encoding the `permutation` (as base N)
     if big(N + 1)^(N + 1) > typemax(Int) # Int64 overflows at N=16
         N = big(N)
     end
-    for i = 1:N
+    for i in 1:N
         bf = N^(N - i)
         s = :($s + (permutation[$i] - 1) * $bf)
     end
@@ -147,7 +144,7 @@ function _decode_permutation(N, K)
     perm = Int[]
     base_factors = _base_factors(Val(N))
     tmp = K
-    for i = 1:N
+    for i in 1:N
         p = div(tmp, base_factors[i])
         tmp -= p * base_factors[i]
         push!(perm, p + 1)
@@ -160,22 +157,21 @@ end
     if N > 15 # Int64 overflows at N=16
         N = big(N)
     end
-    for i = N:-1:1
+    for i in N:-1:1
         push!(base_factors, N^(i - 1))
     end
     ex = :($base_factors)
     return ex
 end
 
-
 @generated function _select_gen_permute(pat, x, ::Permutation{N,K}) where {N,K}
     ex = :(true)
     fs = []
-    for i = 1:N
+    for i in 1:N
         push!(fs, :(make_filter_fun(pat[$i])(x[$i])))
     end
     perm = _decode_permutation(N, K)
-    for i = 1:N
+    for i in 1:N
         p_i = perm[i]
         ex = :($ex && $(fs[p_i]))
     end
@@ -187,21 +183,28 @@ end
 Return subset of `dict` matching selection defined by indices
 """
 select(dict, indices) = _select_gen(dict, indices)
-select(dict, indices, permutation) = _select_gen_perm(dict, indices, permutation)
+function select(dict, indices, permutation)
+    return _select_gen_perm(dict, indices, permutation)
+end
 function select(dict, sh_pat::NamedTuple, names)
     pat, perm = expand_shorthand(sh_pat, names)
-    select(dict, pat, perm)
+    return select(dict, pat, perm)
 end
-select(dict::Dictionary, indices) = getindices(dict, select(keys(dict), indices))
+function select(dict::Dictionary, indices)
+    return getindices(dict, select(keys(dict), indices))
+end
 select(dict, f::Function) = filter(f, dict)
-kselect(sa::SparseVarArray, sh_pat::NamedTuple) =
-    select(keys(sa.data), sh_pat, get_index_names(sa))
-select(sa::SparseVarArray, sh_pat::NamedTuple) =
-    Dictionaries.getindices(sa, kselect(sa, sh_pat))
+function kselect(sa::SparseVarArray, sh_pat::NamedTuple)
+    return select(keys(sa.data), sh_pat, get_index_names(sa))
+end
+function select(sa::SparseVarArray, sh_pat::NamedTuple)
+    return Dictionaries.getindices(sa, kselect(sa, sh_pat))
+end
 
-select_test(dict, indices, cache) =
-    cache ? _select_cached(dict, indices) : _select_gen(keys(dict), indices)
-
+function select_test(dict, indices, cache)
+    return cache ? _select_cached(dict, indices) :
+           _select_gen(keys(dict), indices)
+end
 
 function _select_cached(sa, pat)
     indices = Tuple(i for (i, v) in enumerate(pat) if v !== Colon())
@@ -251,8 +254,10 @@ isfixed(::Type{T} where {T<:UnitRange}) = false
 iscolon(t) = false
 iscolon(::Type{T} where {T<:Colon}) = true
 
-
-@generated function _getindex(sa::AbstractSparseArray{T,N}, tpl::Tuple) where {T,N}
+@generated function _getindex(
+    sa::AbstractSparseArray{T,N},
+    tpl::Tuple,
+) where {T,N}
     lookup = true
     slice = true
     for t in fieldtypes(tpl)
@@ -267,9 +272,11 @@ iscolon(::Type{T} where {T<:Colon}) = true
     if lookup
         return :(get(_data(sa), tpl, zero(T)))
     elseif !slice
-        return :(retval = select(_data(sa), tpl); length(retval) > 0 ? retval : zero(T))
+        return :(retval = select(_data(sa), tpl);
+        length(retval) > 0 ? retval : zero(T))
     else    # Return selection or zero if empty to avoid reduction of empty iterate
-        return :(retval = _select_var(sa, tpl); length(retval) > 0 ? retval : zero(T))
+        return :(retval = _select_var(sa, tpl);
+        length(retval) > 0 ? retval : zero(T))
     end
 end
 
