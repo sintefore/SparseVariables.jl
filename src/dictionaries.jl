@@ -153,7 +153,7 @@ function _decode_permutation(N, K)
 end
 
 will_overflow(N) = sum(big(n)^N for n in 1:N) > typemax(Int)
- 
+
 @generated function _base_factors(::Val{N}) where {N}
     base_factors = []
     if will_overflow(N)
