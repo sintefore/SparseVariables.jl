@@ -1,7 +1,7 @@
 using Base: product
-using Cbc
 using DataFrames
 using Dictionaries
+using HiGHS
 using JuMP
 using SparseVariables
 using Test
@@ -191,9 +191,8 @@ end
         sum(u[c, 2002] for c in cars)
     )
 
-    set_optimizer(m, Cbc.Optimizer)
+    set_optimizer(m, HiGHS.Optimizer)
     set_optimizer_attribute(m, MOI.Silent(), true)
-    set_optimizer_attributes(m, "loglevel" => 0)
     optimize!(m)
 
     tab = table(y)
