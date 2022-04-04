@@ -127,7 +127,7 @@ Return integer encoding the `permutation` (as base N)
 # encode_permutation(permutation) = sum((permutation .- 1) .* _base_factors(Val(length(permutation))))
 @generated function _encode_permutation(permutation::NTuple{N,M}) where {N,M} 
     s = :(0)
-    if N > 15 # Int64 overflows at N=16
+    if big(N+1)^(N+1) > typemax(Int) # Int64 overflows at N=16
         N = big(N)
     end
     for i = 1:N
