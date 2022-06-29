@@ -1,7 +1,7 @@
 name = "SparseVariables"
 uuid = "2749762c-80ed-4b14-8f33-f0736679b02b"
 authors = ["Truls Flatberg <Truls.Flatberg@sintef.no>", "Lars Hellemo <Lars.Hellemo@sintef.no>"]
-version = "0.6.0"
+version = "0.6.1"
 
 [deps]
 Dictionaries = "85a47980-9c8c-11e8-2b9f-f7ca1fa99fb4"
@@ -11,7 +11,7 @@ Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 
 [compat]
 Dictionaries = "0.3"
-JuMP = "0.23, 1"
+JuMP = "1"
 Requires = "1.3"
 Tables = "1.7"
 julia = "1.6"
