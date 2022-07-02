@@ -69,10 +69,3 @@ dense JuMP-variables. Since the container does not provide index names, these ha
 
 Note that output to a DataFrame through the dataframe function is only possible if the DataFrames package is loaded
 before SparseVariables.
-
-
-## TODO
-
-* Support for broadcasting?
-* Restriction on allowable indices (e.g. only a fixed set allowed)
-
