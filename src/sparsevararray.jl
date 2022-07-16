@@ -108,7 +108,7 @@ function insertvar!(
     end
 end
 
-function createvar(model, name, index...; lower_bound = 0, kw_args...)
+function createvar(model, name, index; lower_bound = 0, kw_args...)
     if !isnothing(lower_bound)
         var = @variable(model, lower_bound = lower_bound)
     else
