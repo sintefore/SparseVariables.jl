@@ -52,7 +52,7 @@ macro sparsevariable(args...)
         return quote
             $(esc(v)) =
                 $(esc(m))[Symbol($vname)] =
-                    SparseVarArray($(esc(m)), $vname, $idx)
+                    IndexedVarArray($(esc(m)), $vname, $idx)
         end
     end
 
@@ -65,7 +65,7 @@ macro sparsevariable(args...)
     itr = ex.args[2]
     I = itr.args[2]
 
-    sva = :(SparseVarArray($(esc(m)), $vname, $idx, $(esc(I))))
+    sva = :(IndexedVarArray($(esc(m)), $vname, $idx, $(esc(I))))
     for kw in kw_args
         push!(sva.args, esc(Expr(:kw, kw.args...)))
     end
