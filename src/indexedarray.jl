@@ -8,9 +8,9 @@
 """
 struct IndexedVarArray{N,T} <: AbstractSparseArray{VariableRef,N}
     model::Model
-    name::String
+    name
     data::Dictionary{T,VariableRef}
-    index_names::Vector{Symbol}
+    index_names::NamedTuple
 
     index_cache::Vector{Dictionary}
 end
@@ -21,6 +21,18 @@ end
 #     return N
 #     return IndexedVarArray{N}(model, name, dict, index_names)
 # end
+function IndexedVarArray{N,T}(
+    model::Model,
+    name::String,
+    indices::NamedTuple{Ns, T};
+    lower_bound = 0,
+    kw_args...,
+) where {N,T, Ns}
+    dict = Dictionary{T,VariableRef}()
+    ind_names = Ns
+    return model[Symbol(name)] =
+        IndexedVarArray{N,T}(model, name, dict, ind_names, Vector{Dictionary}(undef, 2^N))
+end
 
 
 function IndexedVarArray{N,T}(
@@ -59,15 +71,15 @@ function IndexedVarArray{N,T}(
 end
 
 function IndexedVarArray{N,T}(model::Model, name::String, ind_names) where {N,T}
-    dict = Dictionary{NTuple{N,Any},VariableRef}()
+    dict = Dictionary{T,VariableRef}()
     index_names = ind_names
     return IndexedVarArray{N,T}(model, name, dict, index_names, Vector{Dictionary}(undef, 2^N))
 end
 
-function IndexedVarArray(m, n, ind_names)
-    N = length(ind_names)
-    return IndexedVarArray{N,NTuple{N,Any}}(m, n, ind_names)
-end
+# function IndexedVarArray(m, n, ind_names)
+#     N = length(ind_names)
+#     return IndexedVarArray{N, NTuple{N,Any}}(m, n, ind_names)
+# end
 
 # function IndexedVarArray(model::Model, name::String, ind_names)
 #     dict = Dictionary{NTuple{length(ind_names),Any},VariableRef}()
@@ -119,20 +131,19 @@ end
 function _select_cached(sa::IndexedVarArray{N,T}, pat) where {N,T}
     # TODO: Benchmark to find good cutoff-value for caching
     # TODO: Return same type for type stability
-#    length(_data(sa)) < 100 && return _select_gen(keys(_data(sa)), pat)
+   length(_data(sa)) < 100 && return _select_gen(keys(_data(sa)), pat)
 
     cache = _getcache(sa, pat)
     active_indices = _nonslices(pat)
     vals = _dropslices(pat)
-    if isempty(cache) || !haskey(cache, vals)
+    if isempty(cache)
         for v in keys(sa)
             vred = _active(v, active_indices)
-            nv = get(cache, vred, typeof(v)[])
+            nv = get!(cache, vred, T[])
             push!(nv, v)    
-            set!(cache, vred, nv)
         end
     end
-    return get(cache, vals, typeof(keys(sa))[])
+    return get(cache, vals, T[])
 end
 
 
@@ -173,15 +184,13 @@ end
     :($t)
 end
 
-
-# function _getcache(sa::IndexedVarArray{N,T}, pat::P) where {N,T,P}
-#         get(sa.index_cache, 
-#              _encode_nonslices(pat), 
-#              Dictionary{_decode_nonslices(sa, pat), Vector{T}}())
-#     end
-
-function _getcache(sa::IndexedVarArray{N,T}, t::Integer) where {N,T}
-    isdefined(sa.index_cache, t) && return sa.index_cache[t]
-    sa.index_cache[t] = Dictionary{_decode_nonslices(sa, t), Vector{T}}()
+function _getcache(sa::IndexedVarArray{N,T}, pat::P) where {N,T,P}
+    t = _encode_nonslices(pat)
+    try
+        return sa.index_cache[t]
+    catch err
+        @debug err
+        sa.index_cache[t] = Dictionary{_decode_nonslices(sa, t), Vector{T}}()  
+    end
+    return sa.index_cache[t]
 end
-_getcache(sa, t) = _getcache(sa, _encode_nonslices(t))
