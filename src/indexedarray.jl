@@ -1,6 +1,3 @@
-# Experimental sparse var array with typed indexing
-
-
 """
     IndexedVarArray{N,T}
 
@@ -11,85 +8,105 @@ struct IndexedVarArray{N,T} <: AbstractSparseArray{VariableRef,N}
     name
     data::Dictionary{T,VariableRef}
     index_names::NamedTuple
-
     index_cache::Vector{Dictionary}
 end
 
-# function IndexedVarArray{N,T}(model::Model, name::String) where {N,T}
-#     dict = Dictionary{T,VariableRef}()
-#     index_names = _default_index_names(N)
-#     return N
-#     return IndexedVarArray{N}(model, name, dict, index_names)
-# end
-function IndexedVarArray{N,T}(
+function IndexedVarArray(
     model::Model,
-    name::String,
-    indices::NamedTuple{Ns, T};
+    name::AbstractString,
+    index_names::NamedTuple{Ns, Ts};
     lower_bound = 0,
     kw_args...,
-) where {N,T, Ns}
+) where {Ns, Ts}
+    T = Tuple{eltype.(fieldtypes(Ts))...}
+    N = length(fieldtypes(Ts))
     dict = Dictionary{T,VariableRef}()
-    ind_names = Ns
     return model[Symbol(name)] =
-        IndexedVarArray{N,T}(model, name, dict, ind_names, Vector{Dictionary}(undef, 2^N))
+         IndexedVarArray{N,T}(model, name, dict, index_names, Vector{Dictionary}(undef, 2^N))
 end
 
-
-function IndexedVarArray{N,T}(
+function IndexedVarArray(
     model::Model,
-    name::String,
-    ind_names,
-    indices::Vector{<:Tuple};
+    name::AbstractString,
+    index_names::NamedTuple{Ns, Ts},
+    indices::Vector{T};
     lower_bound = 0,
     kw_args...,
-) where {N,T}
+) where {Ns, Ts, T}
+    @assert T == Tuple{eltype.(fieldtypes(Ts))...}
+    N = length(fieldtypes(Ts))
+    # TODO: Check if each index is valid
     dict = Dictionary(
         indices,
         (createvar(model, name, k; lower_bound, kw_args...) for k in indices),
     )
     return model[Symbol(name)] =
-        IndexedVarArray{N,T}(model, name, dict, ind_names, Vector{Dictionary}(undef, 2^N))
+        IndexedVarArray{N,T}(model, name, dict, index_names, Vector{Dictionary}(undef, 2^N))
 end
 
-
-function IndexedVarArray{N,T}(
+function IndexedVarArray(
     model::Model,
-    name::String,
-    ind_names,
-    indices::Dictionaries.Indices{<:Tuple};
+    name::AbstractString,
+    index_names::NamedTuple{Ns, Ts},
+    indices::Dictionaries.Indices{T};
     lower_bound = 0,
     kw_args...,
-) where {N,T}
+) where {Ns, Ts, T}
+    @assert T == Tuple{eltype.(fieldtypes(Ts))...}
+    N = length(fieldtypes(Ts))
     return IndexedVarArray{N,T}(
         model,
         name,
-        ind_names,
+        index_names,
         collect(indices);
         lower_bound,
         kw_args...,
     )
 end
 
-function IndexedVarArray{N,T}(model::Model, name::String, ind_names) where {N,T}
-    dict = Dictionary{T,VariableRef}()
-    index_names = ind_names
-    return IndexedVarArray{N,T}(model, name, dict, index_names, Vector{Dictionary}(undef, 2^N))
+_data(sa::IndexedVarArray) = sa.data
+
+already_defined(var, index) = haskey(_data(var), index)
+
+function valid_index(var, index)
+    for i ∈ 1:length(var.index_names)          
+        if !(index[i] ∈ var.index_names[i])
+            return false
+        end
+    end
+    return true
 end
 
-# function IndexedVarArray(m, n, ind_names)
-#     N = length(ind_names)
-#     return IndexedVarArray{N, NTuple{N,Any}}(m, n, ind_names)
-# end
+function clear_cache!(var)
+    for i ∈ 1:length(var.index_cache)
+        if isdefined(var.index_cache, i)
+            empty!(var.index_cache[i])
+        end
+    end
+end
 
-# function IndexedVarArray(model::Model, name::String, ind_names)
-#     dict = Dictionary{NTuple{length(ind_names),Any},VariableRef}()
-#     index_names = ind_names
-#     return IndexedVarArray{length(ind_names),typeof((2,2,2))}(model, name ,dict, index_names, Vector{Dictionary}(undef, 2^length(ind_names)))
-# end
-
-_data(sa::IndexedVarArray) = sa.data
 """
-    insertvar!(var::SparseVarArray{N}, index...; lower_bound = 0, kw_args...)
+    safe_insertvar!(var::IndexedVarArray{N,T}, index...; lower_bound = 0, kw_args...)
+
+Insert a new variable with the given index only after checking if keys are valid and not already defined.
+"""
+function safe_insertvar!(
+    var::IndexedVarArray{N,T},
+    index...;
+    lower_bound = 0,
+    kw_args...,
+) where {N,T}
+
+    !valid_index(var, index) && throw(BoundsError(var, index))# "Not a valid index for $(var.name): $index"g
+    already_defined(var, index) && error("$(var.name): $index already defined")
+    
+    var[index] = createvar(var.model, var.name, index; lower_bound, kw_args...)
+    
+    clear_cache!(var)
+end
+
+"""
+    insertvar!(var::indexedVarArray{N,T}, index...; lower_bound = 0, kw_args...)
 
 Insert a new variable with the given index. 
 """
