@@ -213,3 +213,46 @@ end
     df = dataframe(u, :u, :car, :year)
     @test first(df.car) == "ford"
 end
+
+@testset "IndexedVarArray" begin
+    m = Model()
+    car_cost = SV.SparseArray(
+        Dict(
+            ("ford", 2000) => 100,
+            ("ford", 2001) => 150,
+            ("bmw", 2001) => 200,
+            ("bmw", 2002) => 300,
+        ),
+    )
+
+    y = IndexedVarArray(
+        m,
+        "y",
+        (cars = cars, year = year),
+        collect(keys(car_cost)),
+    )
+    @test length(y) == length(car_cost)
+    z = IndexedVarArray(m, "z", (cars = cars, year = year))
+    for (cr, yr) in keys(car_cost)
+        safe_insertvar!(z, cr, yr)
+    end
+    @test length(z) == length(car_cost)
+    # Add invalid set of values
+    for (cr, yr) in keys(car_cost)
+        # All should fail, either already added, or invalid keys
+        @test_throws "already defined" safe_insertvar!(z, cr, yr)
+    end
+    @test_throws BoundsError safe_insertvar!(z, "lotus", 2001)
+    @test_throws BoundsError safe_insertvar!(z, "bmw", 1957)
+    @test length(z) == length(y)
+
+    # Slicing and lookup
+    @test length(y[:, 2001]) == 2
+    @test length(z["bmw", :]) == 2
+    @test typeof(z["bmw", 2001]) == VariableRef
+    @test z["bmw", 20] == 0
+
+    # Unsafe add still works
+    insertvar!(z, "lotus", 1957)
+    @test length(z) == 5
+end
