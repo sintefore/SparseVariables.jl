@@ -89,7 +89,7 @@ end
 
 function clear_cache!(var)
     for i in 1:length(var.index_cache)
-        if isdefined(var.index_cache, i)
+        if isassigned(var.index_cache, i)
             empty!(var.index_cache[i])
         end
     end
@@ -210,10 +210,9 @@ end
 
 function _getcache(sa::IndexedVarArray{N,T}, pat::P) where {N,T,P}
     t = _encode_nonslices(pat)
-    try
+    if isassigned(sa.index_cache, t)
         return sa.index_cache[t]
-    catch err
-        @debug err
+    else
         sa.index_cache[t] = Dictionary{_decode_nonslices(sa, t),Vector{T}}()
     end
     return sa.index_cache[t]

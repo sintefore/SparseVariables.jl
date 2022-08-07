@@ -289,4 +289,9 @@ end
     )
     @test length(z3[:, 1994, :, :]) ==
           length(filter(x -> x[2] == 1994, more_indices))
+
+    @test length(z3.index_cache[4]) == length(unique(i[2] for i in more_indices)) 
+    SparseVariables.clear_cache!(z3)
+    @test length(z3.index_cache[4]) == 0
+
 end
