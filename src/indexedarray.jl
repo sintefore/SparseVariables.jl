@@ -111,7 +111,8 @@ function safe_insertvar!(
 
     var[index] = createvar(var.model, var.name, index; lower_bound, kw_args...)
 
-    return clear_cache!(var)
+    clear_cache!(var)
+    return var[index]
 end
 
 """

@@ -14,8 +14,10 @@ include("indexedarray.jl")
 
 export SparseArray
 export SparseVarArray
+export IndexedVarArray
 export @sparsevariable
 export insertvar!
+export safe_insertvar!
 export table
 
 function __init__()
