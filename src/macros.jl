@@ -74,7 +74,6 @@ macro sparsevariable(args...)
     end
 end
 
-
 """
     indexedvariable(args...)
 
