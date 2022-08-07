@@ -6,14 +6,14 @@ using InteractiveUtils
 
 # ╔═╡ eb67a960-b8a9-4dee-b51d-8202934cab2c
 begin
-    using AlgebraOfGraphics
-    using BenchmarkTools
-    using CairoMakie
-    using DataFrames
-    using JuMP
-    using ProgressLogging
-    using Random
-    using SparseVariables
+	using AlgebraOfGraphics
+	using BenchmarkTools
+	using CairoMakie
+	using DataFrames
+	using JuMP
+	using ProgressLogging
+	using Random
+	using SparseVariables
 end
 
 # ╔═╡ 907fdf86-ec90-11ec-1e2e-97884202e0e6
@@ -88,7 +88,10 @@ function model_standard(F, C, P, T, D, U, V, W)
     @variable(m, x[F, C, P, T] ≥ 0)
 
     for f in F, c in C, p in P, t in T
-        @constraint(m, sum(x[f, c, p, t] for f in F) == get(D, (c, p, t), 0.0))
+        @constraint(
+            m,
+            sum(x[f, c, p, t] for f in F) == get(D, (c, p, t), 0.0)
+        )
     end
 
     for f in F, t in T
@@ -129,7 +132,8 @@ function model_dict(F, C, P, T, D, U, V, W)
     end
 
     # Constraint setup
-    indices = [(f, c, p, t) for (c, p, t) in keys(D), f in F if W[f, p] == 1]
+    indices =
+        [(f, c, p, t) for (c, p, t) in keys(D), f in F if W[f, p] == 1]
 
     # Customer demand
     for (c̄, p̄, t̄) in keys(D)
@@ -147,8 +151,8 @@ function model_dict(F, C, P, T, D, U, V, W)
         @constraint(
             m,
             sum(
-                x[f, c, p, t] for
-                (f, c, p, t) in filter(i -> i[1] == f̄ && i[4] == t̄, indices)
+                x[f, c, p, t] for (f, c, p, t) in
+                filter(i -> i[1] == f̄ && i[4] == t̄, indices)
             ) ≤ U[f̄, t̄]
         )
     end
@@ -180,7 +184,8 @@ function model_index(F, C, P, T, D, U, V, W)
     m = Model()
 
     # Variable creation
-    indices = [(f, c, p, t) for (c, p, t) in keys(D), f in F if W[f, p] == 1]
+    indices =
+        [(f, c, p, t) for (c, p, t) in keys(D), f in F if W[f, p] == 1]
     @variable(m, x[indices] ≥ 0)
 
     # Constraint setup
@@ -201,8 +206,8 @@ function model_index(F, C, P, T, D, U, V, W)
         @constraint(
             m,
             sum(
-                x[(f, c, p, t)] for
-                (f, c, p, t) in filter(i -> i[1] == f̄ && i[4] == t̄, indices)
+                x[(f, c, p, t)] for (f, c, p, t) in
+                filter(i -> i[1] == f̄ && i[4] == t̄, indices)
             ) ≤ U[f̄, t̄]
         )
     end
@@ -232,51 +237,51 @@ md"## Incremental constraint building
 
 # ╔═╡ a14714b1-8993-47af-ad61-1a715c7f58c9
 function model_incremental(F, C, P, T, D, U, V, W)
-    m = Model()
+        m = Model()
 
-    # Variable creation
-    x = Dict()
-    for (c, p, t) in keys(D), f in F
-        if W[f, p] == 1
-            x[f, c, p, t] = @variable(m, lower_bound = 0)
+        # Variable creation
+        x = Dict()
+        for (c, p, t) in keys(D), f in F
+            if W[f, p] == 1
+                x[f, c, p, t] = @variable(m, lower_bound = 0)
+            end
         end
-    end
 
-    # Constraint setup
-    pcap = Dict((f, t) => AffExpr() for (f, t) in keys(U))
-    cdem = Dict((c, p, t) => AffExpr() for (c, p, t) in keys(D))
-    tcap = Dict((f, c, t) => AffExpr() for (f, c) in keys(V), t in T)
+        # Constraint setup
+        pcap = Dict((f, t) => AffExpr() for (f, t) in keys(U))
+        cdem = Dict((c, p, t) => AffExpr() for (c, p, t) in keys(D))
+        tcap = Dict((f, c, t) => AffExpr() for (f, c) in keys(V), t in T)
 
-    for (f, c, p, t) in keys(x)
-        var = x[f, c, p, t]
-        if (c, p, t) in keys(D)
-            JuMP.add_to_expression!(cdem[c, p, t], var)
+        for (f, c, p, t) in keys(x)
+            var = x[f, c, p, t]
+            if (c, p, t) in keys(D)
+                JuMP.add_to_expression!(cdem[c, p, t], var)
+            end
+            if (f, t) in keys(U)
+                JuMP.add_to_expression!(pcap[f, t], var)
+            end
+            if (f, c) in keys(V)
+                JuMP.add_to_expression!(tcap[f, c, t], var)
+            end
         end
-        if (f, t) in keys(U)
-            JuMP.add_to_expression!(pcap[f, t], var)
+
+        # Customer demand
+        for (c, p, t) in keys(D)
+            @constraint(m, cdem[c, p, t] == D[c, p, t])
         end
-        if (f, c) in keys(V)
-            JuMP.add_to_expression!(tcap[f, c, t], var)
+
+        # Production capacity
+        for (f, t) in keys(U)
+            @constraint(m, pcap[f, t] ≤ U[f, t])
         end
-    end
 
-    # Customer demand
-    for (c, p, t) in keys(D)
-        @constraint(m, cdem[c, p, t] == D[c, p, t])
-    end
+        # Transport capacity
+        for (f, c) in keys(V), t in T
+            @constraint(m, tcap[f, c, t] ≤ V[f, c])
+        end
 
-    # Production capacity
-    for (f, t) in keys(U)
-        @constraint(m, pcap[f, t] ≤ U[f, t])
+        return m
     end
-
-    # Transport capacity
-    for (f, c) in keys(V), t in T
-        @constraint(m, tcap[f, c, t] ≤ V[f, c])
-    end
-
-    return m
-end
 
 # ╔═╡ c2ace375-5854-48f6-a6af-68b7d91fc788
 md"
@@ -361,21 +366,23 @@ function create_test(
     demandprob = 0.05,
     prodprob = 0.2,
     flowprob = 0.8,
-    seed = 42,
-)
+	seed = 42,
+    )
     Random.seed!(seed)
     F = collect(1:nf)
     C = collect(1:nc)
     P = collect(1:np)
     T = collect(1:nt)
-    shuffled = shuffle([(c, p, t) for c in C, p in P, t in T])
+	shuffled = shuffle([(c, p, t) for c in C, p in P, t in T])
     D = Dict(
         (c, p, t) => rand() for
         #c in C, p in P, t in T if rand() < demandprob
-        (c, p, t) in
-        sort(first(shuffled, Int(ceil(demandprob * length(shuffled)))))
+		(c, p, t) in sort(first(shuffled, Int(ceil(demandprob * length(shuffled)))))
     )
 
+	
+
+	
     U = Dict((f, t) => rand() * 100 for f in F, t in T)
     V = Dict((f, c) => rand() * 20 for f in F, c in C if rand() < flowprob)
     W = Dict((f, p) => (rand() < prodprob ? 1 : 0) for f in F, p in P)
@@ -415,12 +422,8 @@ begin
             model_dict,
             model_index,
             model_incremental,
-            model_sparse,
-        ]
-            t = minimum((
-                @elapsed method(create_test(nf, nc, np, nt; seed = r)...)
-                for r in 1:REPS
-            ))
+            model_sparse,]
+            t = minimum((@elapsed method(create_test(nf, nc, np, nt; seed=r)...) for r in 1:REPS))
             push!(res, (Symbol(method), nc, t))
         end
     end
@@ -437,24 +440,13 @@ begin
             model_incremental,
             model_sparse,
         ]
-            ts = []
-            for r in 1:REPS
-                GC.gc()
-                push!(
-                    ts,
-                    @elapsed method(
-                        create_test(
-                            5,
-                            40,
-                            10,
-                            50;
-                            demandprob = dp,
-                            seed = r,
-                        )...,
-                    )
-                )
-            end
-            t = minimum(ts)
+	        ts = []
+			for r in 1:REPS
+				GC.gc()
+				push!(ts, @elapsed method(create_test(5, 40, 10, 50; 
+				demandprob = dp, seed=r)...))
+			end
+			t = minimum(ts)
             push!(sparsity, (Symbol(method), dp, t))
         end
     end
@@ -465,7 +457,7 @@ function plot(df, x = :NC, y = :Time)
     CairoMakie.activate!(type = "svg")
     return draw(
         data(df) *
-        mapping(x, y => "Time (s)", color = :Method, marker = :Method) *
+        mapping(x , y => "Time (s)", color = :Method, marker = :Method) *
         (visual(Lines) + visual(Scatter)),
     )
 end
