@@ -255,4 +255,38 @@ end
     # Unsafe add still works
     insertvar!(z, "lotus", 1957)
     @test length(z) == 5
+
+    # Alternative constructor
+    z2 = IndexedVarArray(m, "z2", (cars = cars, year = year), keys(car_cost))
+    @test length(z2) == length(car_cost)
+
+    # Larger number of variables (to test caching)
+    N = 2000
+    valid_cars = ["bmw", "ford", "opel", "mazda", "volvo"]
+    valid_years = 1980:2021
+    valid_colors = ["red", "green", "black", "blue", "gray"]
+    valid_kms = 1000:250_000
+
+    more_indices = unique(
+        zip(
+            rand(valid_cars, N),
+            rand(valid_years, N),
+            rand(valid_colors, N),
+            rand(valid_kms, N),
+        ),
+    )
+
+    z3 = IndexedVarArray(
+        m,
+        "z3",
+        (
+            cars = valid_cars,
+            year = valid_years,
+            color = valid_colors,
+            km = valid_kms,
+        ),
+        more_indices,
+    )
+    @test length(z3[:, 1994, :, :]) ==
+          length(filter(x -> x[2] == 1994, more_indices))
 end

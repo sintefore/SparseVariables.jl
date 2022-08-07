@@ -64,7 +64,7 @@ function IndexedVarArray(
 ) where {Ns,Ts,T}
     @assert T == Tuple{eltype.(fieldtypes(Ts))...}
     N = length(fieldtypes(Ts))
-    return IndexedVarArray{N,T}(
+    return IndexedVarArray(
         model,
         name,
         index_names,
