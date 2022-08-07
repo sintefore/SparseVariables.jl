@@ -240,7 +240,7 @@ end
     # Add invalid set of values
     for (cr, yr) in keys(car_cost)
         # All should fail, either already added, or invalid keys
-        @test_throws "already defined" safe_insertvar!(z, cr, yr)
+        @test_throws ErrorException safe_insertvar!(z, cr, yr)
     end
     @test_throws BoundsError safe_insertvar!(z, "lotus", 2001)
     @test_throws BoundsError safe_insertvar!(z, "bmw", 1957)
