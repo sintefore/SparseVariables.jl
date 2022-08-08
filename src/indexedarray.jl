@@ -161,16 +161,7 @@ joinex(ex1, ex2) = :($ex1..., $ex2...)
     return :(tuple($(exs[end])...))
 end
 
-function _has_index(idx, active, pat)
-    for (i, a) in enumerate(active)
-        if a
-            idx[i] != pat[i] && return false
-        end
-    end
-    return true
-end
-
-@inline function build_cache!(cache, pat, sa::IndexedVarArray{N,T}) where {N,T}
+function build_cache!(cache, pat, sa::IndexedVarArray{N,T}) where {N,T}
     if isempty(cache)
         for v in keys(sa)
             vred = _active(v, pat)
@@ -207,7 +198,11 @@ end
     exs = []
     for i in 1:length(ps)
         if ps[i] != Colon
-            push!(exs, :(a1 = pat[$i],)) # Workaround for slurping of iterables (like strings)
+            if i > 2 # Workaround for slurping of iterables (like strings) when passing to joinex
+                push!(exs, :(a2 = pat[$i],)) 
+            else
+                push!(exs, :(pat[$i],)) 
+            end
         end
     end
     for i in 1:length(exs)-1
