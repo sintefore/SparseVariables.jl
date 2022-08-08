@@ -141,8 +141,24 @@ function insertvar!(
     # end
 end
 
-function _active(idx, active)
+function _active_old(idx, active)
     return Tuple((idx[i] for i ∈ 1:length(idx) if active[i]))
+end
+
+joinex(ex1, ex2) = :($ex1..., $ex2...)
+@generated function _active(idx::I, pat::P) where {I,P}
+    ids = fieldtypes(I)
+    ps = fieldtypes(P)
+    exs = []
+    for i ∈ 1:length(ids)
+        if ps[i] != Colon
+            push!(exs, :(idx[$i]))
+        end
+    end
+    for i ∈ 1:length(exs)-1
+        exs[i+1] = joinex(exs[i],exs[i+1])
+    end
+    return :(tuple($(exs[end])...))
 end
 
 function _has_index(idx, active, pat)
@@ -154,25 +170,29 @@ function _has_index(idx, active, pat)
     return true
 end
 
-function _select_cached(sa::IndexedVarArray{N,T}, pat) where {N,T}
-    # TODO: Benchmark to find good cutoff-value for caching
-    # TODO: Return same type for type stability
-    length(_data(sa)) < 100 && return _select_gen(keys(_data(sa)), pat)
-
-    cache = _getcache(sa, pat)
-    active_indices = _nonslices(pat)
-    vals = _dropslices(pat)
+@inline function build_cache!(cache, pat, sa::IndexedVarArray{N,T}) where {N,T}
+    # active_indices = _nonslices(pat)
     if isempty(cache)
         for v in keys(sa)
-            vred = _active(v, active_indices)
+            vred = _active(v, pat)#active_indices)
             nv = get!(cache, vred, T[])
             push!(nv, v)
         end
     end
-    return get(cache, vals, T[])
+    return cache
 end
 
-using LinearAlgebra
+function _select_cached(sa::IndexedVarArray{N,T}, pat) where {N,T}
+    # TODO: Benchmark to find good cutoff-value for caching
+    # TODO: Return same type for type stability
+    length(_data(sa)) < 100 && return _select_gen(keys(_data(sa)), pat)
+    cache = _getcache(sa, pat)::Dictionary{_decode_nonslices(sa, pat),Vector{T}}
+    build_cache!(cache, pat, sa)
+    vals = _dropslices_gen(pat)
+    return get!(cache, vals, T[])
+end
+
+
 struct Dim{N} end
 bin2int(v) = bin2int(v, Dim{length(v)}())
 @generated function bin2int(v, ::Dim{N}) where {N}
@@ -184,9 +204,24 @@ function _nonslices(t)
     return Tuple(ti != Colon() for ti in t)
 end
 
-function _dropslices(t)
+function _dropslices(t::P) where {P}
     return Tuple(ti for ti in t if ti != Colon())
 end
+
+@generated function _dropslices_gen(pat::P) where {P}
+    ps = fieldtypes(P)
+    exs = []
+    for i ∈ 1:length(ps)
+        if ps[i] != Colon
+            push!(exs, :(a1=pat[$i],)) # Workaround for slurping of iterables (like strings)
+        end
+    end
+    for i ∈ 1:length(exs)-1
+        exs[i+1] = joinex(exs[i],exs[i+1])
+    end
+    return exs[end]
+end
+
 
 @generated function _encode_nonslices(t::P) where {P}
     tf = Tuple(ti != Colon for ti in fieldtypes(P))

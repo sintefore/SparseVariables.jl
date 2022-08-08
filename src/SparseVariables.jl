@@ -2,6 +2,7 @@ module SparseVariables
 
 using Dictionaries
 using JuMP
+using LinearAlgebra
 using Tables
 using Requires
 
