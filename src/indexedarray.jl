@@ -150,13 +150,13 @@ joinex(ex1, ex2) = :($ex1..., $ex2...)
     ids = fieldtypes(I)
     ps = fieldtypes(P)
     exs = []
-    for i ∈ 1:length(ids)
+    for i in 1:length(ids)
         if ps[i] != Colon
             push!(exs, :(idx[$i]))
         end
     end
-    for i ∈ 1:length(exs)-1
-        exs[i+1] = joinex(exs[i],exs[i+1])
+    for i in 1:length(exs)-1
+        exs[i+1] = joinex(exs[i], exs[i+1])
     end
     return :(tuple($(exs[end])...))
 end
@@ -171,10 +171,9 @@ function _has_index(idx, active, pat)
 end
 
 @inline function build_cache!(cache, pat, sa::IndexedVarArray{N,T}) where {N,T}
-    # active_indices = _nonslices(pat)
     if isempty(cache)
         for v in keys(sa)
-            vred = _active(v, pat)#active_indices)
+            vred = _active(v, pat)
             nv = get!(cache, vred, T[])
             push!(nv, v)
         end
@@ -192,16 +191,11 @@ function _select_cached(sa::IndexedVarArray{N,T}, pat) where {N,T}
     return get!(cache, vals, T[])
 end
 
-
 struct Dim{N} end
 bin2int(v) = bin2int(v, Dim{length(v)}())
 @generated function bin2int(v, ::Dim{N}) where {N}
     w = reverse([2^(i - 1) for i in 1:N])
     return :(dot($w, v))
-end
-
-function _nonslices(t)
-    return Tuple(ti != Colon() for ti in t)
 end
 
 function _dropslices(t::P) where {P}
@@ -211,17 +205,16 @@ end
 @generated function _dropslices_gen(pat::P) where {P}
     ps = fieldtypes(P)
     exs = []
-    for i ∈ 1:length(ps)
+    for i in 1:length(ps)
         if ps[i] != Colon
-            push!(exs, :(a1=pat[$i],)) # Workaround for slurping of iterables (like strings)
+            push!(exs, :(a1 = pat[$i],)) # Workaround for slurping of iterables (like strings)
         end
     end
-    for i ∈ 1:length(exs)-1
-        exs[i+1] = joinex(exs[i],exs[i+1])
+    for i in 1:length(exs)-1
+        exs[i+1] = joinex(exs[i], exs[i+1])
     end
     return exs[end]
 end
-
 
 @generated function _encode_nonslices(t::P) where {P}
     tf = Tuple(ti != Colon for ti in fieldtypes(P))
