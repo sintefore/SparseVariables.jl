@@ -199,9 +199,9 @@ end
     for i in 1:length(ps)
         if ps[i] != Colon
             if i > 2 # Workaround for slurping of iterables (like strings) when passing to joinex
-                push!(exs, :(a2 = pat[$i],)) 
+                push!(exs, :(a2 = pat[$i],))
             else
-                push!(exs, :(pat[$i],)) 
+                push!(exs, :(pat[$i],))
             end
         end
     end
