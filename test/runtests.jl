@@ -287,8 +287,12 @@ end
         ),
         more_indices,
     )
+    # Test with integer index
     @test length(z3[:, 1994, :, :]) ==
           length(filter(x -> x[2] == 1994, more_indices))
+    # Test with string index
+    @test length(z3["bmw", :, :, :]) ==
+          length(filter(x -> x[1] == "bmw", more_indices))
 
     @test length(z3.index_cache[4]) ==
           length(unique(i[2] for i in more_indices))

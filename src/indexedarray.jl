@@ -152,7 +152,11 @@ joinex(ex1, ex2) = :($ex1..., $ex2...)
     exs = []
     for i in 1:length(ids)
         if ps[i] != Colon
-            push!(exs, :(idx[$i]))
+            if i > 2
+                push!(exs, :(a1 = idx[$i],))
+            else
+                push!(exs, :(idx[$i],))
+            end
         end
     end
     for i in 1:length(exs)-1
