@@ -18,7 +18,7 @@ export SparseVarArray
 export IndexedVarArray
 export @sparsevariable
 export insertvar!
-export safe_insertvar!
+export unsafe_insertvar!
 export table
 
 function __init__()

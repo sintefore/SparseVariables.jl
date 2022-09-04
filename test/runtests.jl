@@ -234,16 +234,16 @@ end
     @test length(y) == length(car_cost)
     z = IndexedVarArray(m, "z", (cars = cars, year = year))
     for (cr, yr) in keys(car_cost)
-        safe_insertvar!(z, cr, yr)
+        insertvar!(z, cr, yr)
     end
     @test length(z) == length(car_cost)
     # Add invalid set of values
     for (cr, yr) in keys(car_cost)
         # All should fail, either already added, or invalid keys
-        @test_throws ErrorException safe_insertvar!(z, cr, yr)
+        @test_throws ErrorException insertvar!(z, cr, yr)
     end
-    @test_throws BoundsError safe_insertvar!(z, "lotus", 2001)
-    @test_throws BoundsError safe_insertvar!(z, "bmw", 1957)
+    @test_throws BoundsError insertvar!(z, "lotus", 2001)
+    @test_throws BoundsError insertvar!(z, "bmw", 1957)
     @test length(z) == length(y)
 
     # Slicing and lookup
@@ -252,8 +252,8 @@ end
     @test typeof(z["bmw", 2001]) == VariableRef
     @test z["bmw", 20] == 0
 
-    # Unsafe add still works
-    insertvar!(z, "lotus", 1957)
+    # Unsafe also works
+    unsafe_insertvar!(z, "lotus", 1957)
     @test length(z) == 5
 
     # Alternative constructor

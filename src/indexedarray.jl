@@ -96,11 +96,11 @@ function clear_cache!(var)
 end
 
 """
-    safe_insertvar!(var::IndexedVarArray{N,T}, index...; lower_bound = 0, kw_args...)
+    insertvar!(var::IndexedVarArray{N,T}, index...; lower_bound = 0, kw_args...)
 
 Insert a new variable with the given index only after checking if keys are valid and not already defined.
 """
-function safe_insertvar!(
+function insertvar!(
     var::IndexedVarArray{N,T},
     index...;
     lower_bound = 0,
@@ -116,11 +116,12 @@ function safe_insertvar!(
 end
 
 """
-    insertvar!(var::indexedVarArray{N,T}, index...; lower_bound = 0, kw_args...)
+    unsafe_insertvar!(var::indexedVarArray{N,T}, index...; lower_bound = 0, kw_args...)
 
-Insert a new variable with the given index. 
+Insert a new variable with the given index withouth checking if the index is valid or 
+ already assigned.
 """
-function insertvar!(
+function unsafe_insertvar!(
     var::IndexedVarArray{N,T},
     index...;
     lower_bound = 0,
