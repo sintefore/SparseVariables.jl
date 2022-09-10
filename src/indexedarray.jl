@@ -142,10 +142,6 @@ function unsafe_insertvar!(
     # end
 end
 
-function _active_old(idx, active)
-    return Tuple((idx[i] for i ∈ 1:length(idx) if active[i]))
-end
-
 joinex(ex1, ex2) = :($ex1..., $ex2...)
 @generated function _active(idx::I, pat::P) where {I,P}
     ids = fieldtypes(I)
@@ -215,8 +211,13 @@ end
     end
     return exs[end]
 end
+"""
+    _get_cache_index(::P)
 
-@generated function _encode_nonslices(t::P) where {P}
+Return the position in the cache array computed from the pattern (Tuple), using the types only.
+Non-colons count as 1, colons as 0, which are binary encoded to an integer.
+"""
+@generated function _get_cache_index(::P) where {P}
     tf = Tuple(ti != Colon for ti in fieldtypes(P))
     i = bin2int(tf)
     return :($i)
@@ -229,6 +230,11 @@ function _decode_nonslices(::IndexedVarArray{N,T}, v::Integer) where {N,T}
     }
 end
 
+"""
+    _decode_nonslices(::IndexedVarArray{N,T}, ::P)
+
+Reconstruct types of a pattern from the array types and the pattern type
+"""
 @generated function _decode_nonslices(::IndexedVarArray{N,T}, ::P) where {N,T,P}
     fts = fieldtypes(T)
     fts2 = fieldtypes(P)
@@ -237,7 +243,7 @@ end
 end
 
 function _getcache(sa::IndexedVarArray{N,T}, pat::P) where {N,T,P}
-    t = _encode_nonslices(pat)
+    t = _get_cache_index(pat)
     if isassigned(sa.index_cache, t)
         return sa.index_cache[t]
     else
