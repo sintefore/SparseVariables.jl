@@ -10,6 +10,13 @@ Watch the JuliaCon/JuMP-dev 2022 lightning talk and check out the [notebook with
 
 [![SparseVariables - Efficient sparse modelling with JuMP](https://img.youtube.com/vi/YuDvfZo9W5A/3.jpg)](https://youtu.be/YuDvfZo9W5A)
 
+2022-09: Updated benchmarks of time spent on model construction with different number of variables (see [benchmark notebook for details](benchmark/benchmark.jl)) with additional types `IndexedVarArray` (model_indexed) and `SparseAxisArray` (model_sparse_aa) on current julia master:
+
+![](benchmark/res.svg)
+
+Benchmarks with time spent on model construction with different level of sparsity:
+
+![](benchmark/sparsity.svg)
 
 ## Usage
 
@@ -56,6 +63,22 @@ end
 # Filter using functions on indices
 @constraint(m, sum(z[endswith("a"), iseven]) >= 1)
 ```
+
+## IndexedVarArray
+
+Use IndexedVarArrays to check for valid indices and to warn against duplicate 
+indices, as well as improved performance:
+
+```julia
+    w = IndexedVarArray(m, "w", (car=cars, year=years))
+    m[:w] = w
+
+    for c in cars, y in years
+        insertvar!(m, c, y)
+    end
+```
+
+
 
 ## Solution information
 
