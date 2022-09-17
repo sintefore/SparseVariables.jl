@@ -5,7 +5,8 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ 198a71fb-bcbb-46ad-ad79-b24a720e62c7
-import Pkg;Pkg.activate(".")
+import Pkg;
+Pkg.activate(".");
 
 # ╔═╡ eb67a960-b8a9-4dee-b51d-8202934cab2c
 begin
@@ -340,9 +341,16 @@ function model_sparse_aa(F, C, P, T, D, U, V, W)
     m = Model()
 
     # Variable creation
-    @variable(m, x[factory=F, customer=C, product=P, period=T; 
-		W[factory, product] == 1])
-
+    @variable(
+        m,
+        x[
+            factory = F,
+            customer = C,
+            product = P,
+            period = T;
+            W[factory, product] == 1,
+        ]
+    )
 
     @sparsevariable(m, x[factory, customer, product, period])
 
@@ -351,7 +359,7 @@ function model_sparse_aa(F, C, P, T, D, U, V, W)
             insertvar!(x, f, c, p, t)
         end
     end
-		
+
     # Constraint creation
 
     # Customer demand
@@ -381,7 +389,11 @@ function model_indexed(F, C, P, T, D, U, V, W)
     m = Model()
 
     # Variable creation
-   x = SparseVariables.IndexedVarArray(m, "x", (factory=F, customer=C, product=P, period=T))
+    x = SparseVariables.IndexedVarArray(
+        m,
+        "x",
+        (factory = F, customer = C, product = P, period = T),
+    )
     m[:x] = x
 
     for f in F, (c, p, t) in keys(D)
@@ -433,7 +445,6 @@ md"# Check [SparseVariables.jl](https://github.com/hellemo/SparseVariables.jl) o
 md"## "
 
 # ╔═╡ 9d8b6754-1c49-4f4f-b1ad-f5d8eac427c1
-
 
 # ╔═╡ 4376b3c0-d008-49f3-8b28-d22f6a30324c
 md"
@@ -511,8 +522,8 @@ begin
             model_index,
             model_incremental,
             model_sparse,
-			model_sparse_aa,
-			model_indexed,
+            model_sparse_aa,
+            model_indexed,
         ]
             t = minimum((
                 @elapsed method(create_test(nf, nc, np, nt; seed = r)...)
@@ -533,8 +544,8 @@ begin
             model_index,
             model_incremental,
             model_sparse,
-			model_sparse_aa,
-			model_indexed,
+            model_sparse_aa,
+            model_indexed,
         ]
             ts = []
             for r in 1:REPS
