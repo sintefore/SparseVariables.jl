@@ -5,8 +5,10 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ 198a71fb-bcbb-46ad-ad79-b24a720e62c7
-import Pkg;
-Pkg.activate(".");
+begin
+    import Pkg
+    Pkg.activate(".")
+end
 
 # ╔═╡ eb67a960-b8a9-4dee-b51d-8202934cab2c
 begin
@@ -348,17 +350,9 @@ function model_sparse_aa(F, C, P, T, D, U, V, W)
             customer = C,
             product = P,
             period = T;
-            W[factory, product] == 1,
-        ]
+            W[factory, product] == 1 && (factory, product, period) in keys(D),
+        ] >= 0,
     )
-
-    @sparsevariable(m, x[factory, customer, product, period])
-
-    for f in F, (c, p, t) in keys(D)
-        if W[f, p] == 1
-            insertvar!(x, f, c, p, t)
-        end
-    end
 
     # Constraint creation
 
@@ -382,7 +376,7 @@ end
 
 # ╔═╡ a47ec94a-d9ff-4123-b19e-6292f44fe538
 md"# Using IndexedVarArray
-A new containter with defined allowed values and performance improvements"
+A new containter with defined allowed values and performance improvements."
 
 # ╔═╡ 2aff6a71-b37b-4f0a-8b3c-5a09f72e3c7c
 function model_indexed(F, C, P, T, D, U, V, W)
@@ -555,7 +549,7 @@ begin
                     @elapsed method(
                         create_test(
                             5,
-                            40,
+                            20,
                             10,
                             50;
                             demandprob = dp,
@@ -619,7 +613,7 @@ save("sparsity.svg", plot(sparsity, :DP, :Time))
 # ╟─6bbcbd45-839f-4610-897a-9cada6a65de4
 # ╠═4a80508b-c664-4337-bf93-06fcf1f746cd
 # ╠═49b0a978-48f7-4f1c-9d69-bad1cbea22e5
-# ╟─a47ec94a-d9ff-4123-b19e-6292f44fe538
+# ╠═a47ec94a-d9ff-4123-b19e-6292f44fe538
 # ╠═2aff6a71-b37b-4f0a-8b3c-5a09f72e3c7c
 # ╠═de8f21d7-2997-4eb0-acbe-45b863961a32
 # ╟─a25b747b-705a-4cf6-abaa-11d2f1f76272
