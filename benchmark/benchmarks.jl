@@ -5,8 +5,10 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ 198a71fb-bcbb-46ad-ad79-b24a720e62c7
-import Pkg;
-Pkg.activate(".");
+begin
+    import Pkg
+    Pkg.activate(".")
+end
 
 # ╔═╡ eb67a960-b8a9-4dee-b51d-8202934cab2c
 begin
@@ -348,17 +350,9 @@ function model_sparse_aa(F, C, P, T, D, U, V, W)
             customer = C,
             product = P,
             period = T;
-            W[factory, product] == 1,
-        ]
+            W[factory, product] == 1 && (factory, product, period) in keys(D),
+        ] >= 0,
     )
-
-    @sparsevariable(m, x[factory, customer, product, period])
-
-    for f in F, (c, p, t) in keys(D)
-        if W[f, p] == 1
-            insertvar!(x, f, c, p, t)
-        end
-    end
 
     # Constraint creation
 
@@ -555,7 +549,7 @@ begin
                     @elapsed method(
                         create_test(
                             5,
-                            40,
+                            20,
                             10,
                             50;
                             demandprob = dp,
