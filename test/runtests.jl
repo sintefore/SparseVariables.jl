@@ -213,3 +213,89 @@ end
     df = dataframe(u, :u, :car, :year)
     @test first(df.car) == "ford"
 end
+
+@testset "IndexedVarArray" begin
+    m = Model()
+    car_cost = SV.SparseArray(
+        Dict(
+            ("ford", 2000) => 100,
+            ("ford", 2001) => 150,
+            ("bmw", 2001) => 200,
+            ("bmw", 2002) => 300,
+        ),
+    )
+
+    y = IndexedVarArray(
+        m,
+        "y",
+        (cars = cars, year = year),
+        collect(keys(car_cost)),
+    )
+    @test length(y) == length(car_cost)
+    z = IndexedVarArray(m, "z", (cars = cars, year = year))
+    for (cr, yr) in keys(car_cost)
+        insertvar!(z, cr, yr)
+    end
+    @test length(z) == length(car_cost)
+    # Add invalid set of values
+    for (cr, yr) in keys(car_cost)
+        # All should fail, either already added, or invalid keys
+        @test_throws ErrorException insertvar!(z, cr, yr)
+    end
+    @test_throws BoundsError insertvar!(z, "lotus", 2001)
+    @test_throws BoundsError insertvar!(z, "bmw", 1957)
+    @test length(z) == length(y)
+
+    # Slicing and lookup
+    @test length(y[:, 2001]) == 2
+    @test length(z["bmw", :]) == 2
+    @test typeof(z["bmw", 2001]) == VariableRef
+    @test z["bmw", 20] == 0
+
+    # Unsafe also works
+    unsafe_insertvar!(z, "lotus", 1957)
+    @test length(z) == 5
+
+    # Alternative constructor
+    z2 = IndexedVarArray(m, "z2", (cars = cars, year = year), keys(car_cost))
+    @test length(z2) == length(car_cost)
+
+    # Larger number of variables (to test caching)
+    N = 2000
+    valid_cars = ["bmw", "ford", "opel", "mazda", "volvo"]
+    valid_years = 1980:2021
+    valid_colors = ["red", "green", "black", "blue", "gray"]
+    valid_kms = 1000:250_000
+
+    more_indices = unique(
+        zip(
+            rand(valid_cars, N),
+            rand(valid_years, N),
+            rand(valid_colors, N),
+            rand(valid_kms, N),
+        ),
+    )
+
+    z3 = IndexedVarArray(
+        m,
+        "z3",
+        (
+            cars = valid_cars,
+            year = valid_years,
+            color = valid_colors,
+            km = valid_kms,
+        ),
+        more_indices,
+    )
+    # Test with integer index
+    @test length(z3[:, 1994, :, :]) ==
+          length(filter(x -> x[2] == 1994, more_indices))
+    # Test with string index
+    @test length(z3["bmw", :, :, :]) ==
+          length(filter(x -> x[1] == "bmw", more_indices))
+
+    @test length(z3.index_cache[4]) ==
+          length(unique(i[2] for i in more_indices))
+    SparseVariables.clear_cache!(z3)
+    @test length(z3.index_cache[4]) == 0
+end

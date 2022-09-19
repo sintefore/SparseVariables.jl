@@ -2,6 +2,7 @@ module SparseVariables
 
 using Dictionaries
 using JuMP
+using LinearAlgebra
 using Tables
 using Requires
 
@@ -10,11 +11,14 @@ include("sparsevararray.jl")
 include("macros.jl")
 include("dictionaries.jl")
 include("tables.jl")
+include("indexedarray.jl")
 
 export SparseArray
 export SparseVarArray
+export IndexedVarArray
 export @sparsevariable
 export insertvar!
+export unsafe_insertvar!
 export table
 
 function __init__()

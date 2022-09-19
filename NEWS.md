@@ -1,6 +1,10 @@
 TimeStructures release notes
 ===================================
 
+Version 0.6.2 (2022-09-19)
+--------------------------
+* Add IndexedVarArray that checks for valid indices on insert and has improved performance
+
 Version 0.6.1 (2022-06-29)
 --------------------------
 * Release under MIT License
