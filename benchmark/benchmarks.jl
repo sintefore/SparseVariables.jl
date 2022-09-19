@@ -376,7 +376,7 @@ end
 
 # ╔═╡ a47ec94a-d9ff-4123-b19e-6292f44fe538
 md"# Using IndexedVarArray
-A new containter with defined allowed values and performance improvements"
+A new containter with defined allowed values and performance improvements."
 
 # ╔═╡ 2aff6a71-b37b-4f0a-8b3c-5a09f72e3c7c
 function model_indexed(F, C, P, T, D, U, V, W)
@@ -613,7 +613,7 @@ save("sparsity.svg", plot(sparsity, :DP, :Time))
 # ╟─6bbcbd45-839f-4610-897a-9cada6a65de4
 # ╠═4a80508b-c664-4337-bf93-06fcf1f746cd
 # ╠═49b0a978-48f7-4f1c-9d69-bad1cbea22e5
-# ╟─a47ec94a-d9ff-4123-b19e-6292f44fe538
+# ╠═a47ec94a-d9ff-4123-b19e-6292f44fe538
 # ╠═2aff6a71-b37b-4f0a-8b3c-5a09f72e3c7c
 # ╠═de8f21d7-2997-4eb0-acbe-45b863961a32
 # ╟─a25b747b-705a-4cf6-abaa-11d2f1f76272
