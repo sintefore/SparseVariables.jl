@@ -16,7 +16,7 @@ function Base.getindex(
 end
 
 function Base.getindex(sa::AbstractSparseArray{T,N}, idx...) where {T,N}
-    length(idx) != N && throw(BoundsError(sa, idx))
+    length(idx) != 1 && length(idx) != N && throw(BoundsError(sa, idx))
     return _getindex(sa, idx)
 end
 
@@ -98,6 +98,8 @@ end
 function SparseArray(d::Dict{K,T}) where {T,N,K<:NTuple{N,Any}}
     return SparseArray(Dictionary(d))
 end
+
+
 
 function SparseArray(d::Dict{S,T}) where {S,T}
     dd = Dict((key,) => val for (key, val) in d)
