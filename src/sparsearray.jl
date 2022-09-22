@@ -99,8 +99,6 @@ function SparseArray(d::Dict{K,T}) where {T,N,K<:NTuple{N,Any}}
     return SparseArray(Dictionary(d))
 end
 
-
-
 function SparseArray(d::Dict{S,T}) where {S,T}
     dd = Dict((key,) => val for (key, val) in d)
     return SparseArray(Dictionary(dd))

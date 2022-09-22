@@ -252,20 +252,18 @@ function _getcache(sa::IndexedVarArray{N,T}, pat::P) where {N,T,P}
     return sa.index_cache[t]
 end
 
-
-
 function _from_linear(i, d)
     r = Int[]
     for dx in d
         push!(r, mod1(i, dx))
-        i = div(i+dx-1, dx)
+        i = div(i + dx - 1, dx)
     end
     return tuple(r...)
 end
 
 function _linear_lookup(sa::IndexedVarArray, i::Integer)
     active = _from_linear(i, [length(i) for i in sa.index_names])
-    [sa.index_names[i][active[i]] for i in 1:length(active)]
+    return [sa.index_names[i][active[i]] for i in 1:length(active)]
 end
 
 # Size and length over full range (as for SparseArray)
@@ -273,4 +271,6 @@ Base.size(A::IndexedVarArray) = tuple([length(i) for i in A.index_names]...)
 Base.length(sa::IndexedVarArray) = prod(size(sa))
 
 # Linear lookup (not sure how useful this is, but mandated by interface for AbstractArray)
-Base.getindex(sa::IndexedVarArray{N,T}, i::Integer) where {N,T} =  Base.getindex(sa, _linear_lookup(sa, i)...)
+function Base.getindex(sa::IndexedVarArray{N,T}, i::Integer) where {N,T}
+    return Base.getindex(sa, _linear_lookup(sa, i)...)
+end

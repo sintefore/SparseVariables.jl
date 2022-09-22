@@ -300,10 +300,8 @@ end
     @test length(z3.index_cache[4]) == 0
 end
 
-
-
 @testset "Array Interface" begin
-    for d in [(3,5,7), (2,3), (3,4), (2,5,3,4)]
+    for d in [(3, 5, 7), (2, 3), (3, 4), (2, 5, 3, 4)]
         idx = reshape(collect(1:prod(d)), d)
         for i in 1:prod(d)
             @test idx[SparseVariables._from_linear(i, d)...] == idx[i]
@@ -312,7 +310,7 @@ end
 
     # Test linear indexing
     m = Model()
-    x = IndexedVarArray(m, "x", (i=1:3,j=1:4,k=1:3))
+    x = IndexedVarArray(m, "x", (i = 1:3, j = 1:4, k = 1:3))
     insertvar!(x, 1, 1, 1)
     @test x[1] === x[1, 1, 1]
     insertvar!(x, 2, 1, 1)
@@ -321,11 +319,8 @@ end
     @test x[21] === x[3, 3, 2]
 
     # Test size
-    for I=1:5, J=1:5, K=1:5
-        x = IndexedVarArray(m, "x", (i=1:I,j=1:J,k=1:K))
+    for I in 1:5, J in 1:5, K in 1:5
+        x = IndexedVarArray(m, "x", (i = 1:I, j = 1:J, k = 1:K))
         @test size(x) == (I, J, K)
     end
-
-
-
 end
