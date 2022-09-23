@@ -231,12 +231,12 @@ end
         (cars = cars, year = year),
         collect(keys(car_cost)),
     )
-    @test length(y) == length(car_cost)
+    @test nnz(y) == length(car_cost)
     z = IndexedVarArray(m, "z", (cars = cars, year = year))
     for (cr, yr) in keys(car_cost)
         insertvar!(z, cr, yr)
     end
-    @test length(z) == length(car_cost)
+    @test nnz(z) == length(car_cost)
     # Add invalid set of values
     for (cr, yr) in keys(car_cost)
         # All should fail, either already added, or invalid keys
@@ -244,7 +244,7 @@ end
     end
     @test_throws BoundsError insertvar!(z, "lotus", 2001)
     @test_throws BoundsError insertvar!(z, "bmw", 1957)
-    @test length(z) == length(y)
+    @test nnz(z) == nnz(y)
 
     # Slicing and lookup
     @test length(y[:, 2001]) == 2
@@ -254,11 +254,11 @@ end
 
     # Unsafe also works
     unsafe_insertvar!(z, "lotus", 1957)
-    @test length(z) == 5
+    @test nnz(z) == 5
 
     # Alternative constructor
     z2 = IndexedVarArray(m, "z2", (cars = cars, year = year), keys(car_cost))
-    @test length(z2) == length(car_cost)
+    @test nnz(z2) == length(car_cost)
 
     # Larger number of variables (to test caching)
     N = 2000

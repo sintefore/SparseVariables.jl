@@ -269,6 +269,7 @@ end
 # Size and length over full range (as for SparseArray)
 Base.size(A::IndexedVarArray) = tuple([length(i) for i in A.index_names]...)
 Base.length(sa::IndexedVarArray) = prod(size(sa))
+nnz(sa::IndexedVarArray) = length(_data(sa))
 
 # Linear lookup (not sure how useful this is, but mandated by interface for AbstractArray)
 function Base.getindex(sa::IndexedVarArray{N,T}, i::Integer) where {N,T}

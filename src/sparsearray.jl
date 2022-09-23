@@ -33,7 +33,7 @@ function Base.setindex!(sa::AbstractSparseArray{T,N}, val, idx...) where {T,N}
     return setindex!(sa, val, idx)
 end
 
-Base.length(sa::AbstractSparseArray) = length(_data(sa))
+nnz(sa::AbstractSparseArray) = length(_data(sa))
 Base.size(sa::AbstractSparseArray) = length(_data(sa))
 Base.keys(sa::AbstractSparseArray) = keys(_data(sa))
 
