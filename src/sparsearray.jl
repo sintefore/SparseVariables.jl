@@ -38,7 +38,7 @@ Base.size(sa::AbstractSparseArray) = length(_data(sa))
 Base.keys(sa::AbstractSparseArray) = keys(_data(sa))
 
 function Base.summary(io::IO, sa::AbstractSparseArray)
-    num_entries = length(sa)
+    num_entries = nnz(sa)
     return print(
         io,
         typeof(sa),

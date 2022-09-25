@@ -323,4 +323,14 @@ end
         x = IndexedVarArray(m, "x", (i = 1:I, j = 1:J, k = 1:K))
         @test size(x) == (I, J, K)
     end
+
+    # Test JuMP Extension
+    m = Model()
+    @variable(m, x[i = 1:3, j = 100:102] >= 0, container = IndexedVarArray)
+    @test nnz(x) == 0
+    @test length(x) == 9
+    insertvar!(x, 1, 100)
+    @test nnz(x) == 1
+    unsafe_insertvar!(x, 2, 102)
+    @test nnz(x) == 2
 end
