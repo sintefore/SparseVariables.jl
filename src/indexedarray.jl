@@ -247,8 +247,8 @@ function _from_linear(i, d)
 end
 
 function _linear_lookup(sa::IndexedVarArray, i::Integer)
-    active = _from_linear(i, [length(i) for i in sa.index_names])
-    return [sa.index_names[i][active[i]] for i in 1:length(active)]
+    active = _from_linear(i, [length(ixn) for ixn in sa.index_names])
+    return [sa.index_names[ix][iv] for (ix, iv) in pairs(active)]
 end
 
 # Size and length over full range (as for SparseArray)
