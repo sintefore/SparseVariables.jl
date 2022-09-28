@@ -70,11 +70,11 @@ Use IndexedVarArrays to check for valid indices and to warn against duplicate
 indices, as well as improved performance:
 
 ```julia
-    w = IndexedVarArray(m, "w", (car=cars, year=years))
+    w = IndexedVarArray(m, "w", (car=cars, year=year))
     m[:w] = w
 
-    for c in cars, y in years
-        insertvar!(m, c, y)
+    for c in cars, y in year
+        insertvar!(w, c, y)
     end
 ```
 
