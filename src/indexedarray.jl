@@ -264,9 +264,9 @@ end
 # Extension for standard JuMP macros
 function Containers.container(
     f::Function,
-    names,
     indices,
     D::Type{IndexedVarArray},
+    names,
 )
     iva_names = NamedTuple{tuple(names...)}(indices.prod.iterators)
     T = Tuple{eltype.(indices.prod.iterators)...}
@@ -282,5 +282,5 @@ end
 # Fallback when no names are provided
 function Containers.container(f::Function, indices, D::Type{IndexedVarArray})
     index_vars = Symbol.("i$i" for i in 1:length(indices.prod.iterators))
-    return Containers.container(f, index_vars, indices, D)
+    return Containers.container(f, indices, D, index_vars)
 end
