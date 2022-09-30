@@ -237,7 +237,6 @@ function _getcache(sa::IndexedVarArray{N,T}, pat::P) where {N,T,P}
     return sa.index_cache[t]
 end
 
-Base.length(sa::IndexedVarArray) = length(_data(sa))
 
 # Extension for standard JuMP macros
 function Containers.container(

@@ -46,7 +46,7 @@ function Base.summary(io::IO, sa::AbstractSparseArray)
     )
 end
 Base.length(sa::AbstractSparseArray) = length(_data(sa))
-
+Base.sum(sa::AbstractSparseArray) = sum(_data(sa))
 
 function Base.show(io::IO, ::MIME"text/plain", sa::AbstractSparseArray)
     summary(io, sa)
