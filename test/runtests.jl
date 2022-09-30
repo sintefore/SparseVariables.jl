@@ -231,12 +231,12 @@ end
         (cars = cars, year = year),
         collect(keys(car_cost)),
     )
-    @test nnz(y) == length(car_cost)
+    @test length(y) == length(car_cost)
     z = IndexedVarArray(m, "z", (cars = cars, year = year))
     for (cr, yr) in keys(car_cost)
         insertvar!(z, cr, yr)
     end
-    @test nnz(z) == length(car_cost)
+    @test length(z) == length(car_cost)
     # Add invalid set of values
     for (cr, yr) in keys(car_cost)
         # All should fail, either already added, or invalid keys
@@ -244,7 +244,7 @@ end
     end
     @test_throws BoundsError insertvar!(z, "lotus", 2001)
     @test_throws BoundsError insertvar!(z, "bmw", 1957)
-    @test nnz(z) == nnz(y)
+    @test length(z) == length(y)
 
     # Slicing and lookup
     @test length(y[:, 2001]) == 2
@@ -254,11 +254,11 @@ end
 
     # Unsafe also works
     unsafe_insertvar!(z, "lotus", 1957)
-    @test nnz(z) == 5
+    @test length(z) == 5
 
     # Alternative constructor
     z2 = IndexedVarArray(m, "z2", (cars = cars, year = year), keys(car_cost))
-    @test nnz(z2) == length(car_cost)
+    @test length(z2) == length(car_cost)
 
     # Larger number of variables (to test caching)
     N = 2000
@@ -300,37 +300,14 @@ end
     @test length(z3.index_cache[4]) == 0
 end
 
-@testset "Array Interface" begin
-    for d in [(3, 5, 7), (2, 3), (3, 4), (2, 5, 3, 4)]
-        idx = reshape(collect(1:prod(d)), d)
-        for i in 1:prod(d)
-            @test idx[SparseVariables._from_linear(i, d)...] == idx[i]
-        end
-    end
-
-    # Test linear indexing
-    m = Model()
-    x = IndexedVarArray(m, "x", (i = 1:3, j = 1:4, k = 1:3))
-    insertvar!(x, 1, 1, 1)
-    @test x[1] === x[1, 1, 1]
-    insertvar!(x, 2, 1, 1)
-    @test x[2] === x[2, 1, 1]
-    insertvar!(x, 3, 3, 2)
-    @test x[21] === x[3, 3, 2]
-
-    # Test size
-    for I in 1:5, J in 1:5, K in 1:5
-        x = IndexedVarArray(m, "x", (i = 1:I, j = 1:J, k = 1:K))
-        @test size(x) == (I, J, K)
-    end
-
+@testset "JuMP extension" begin
+    
     # Test JuMP Extension
     m = Model()
     @variable(m, x[i = 1:3, j = 100:102] >= 0, container = IndexedVarArray)
-    @test nnz(x) == 0
-    @test length(x) == 9
+    @test length(x) == 0
     insertvar!(x, 1, 100)
-    @test nnz(x) == 1
+    @test length(x) == 1
     unsafe_insertvar!(x, 2, 102)
-    @test nnz(x) == 2
+    @test length(x) == 2
 end
