@@ -16,7 +16,7 @@ function Base.getindex(
 end
 
 function Base.getindex(sa::AbstractSparseArray{T,N}, idx...) where {T,N}
-    length(idx) != 1 && length(idx) != N && throw(BoundsError(sa, idx))
+    length(idx) != N && throw(BoundsError(sa, idx))
     return _getindex(sa, idx)
 end
 
@@ -46,6 +46,7 @@ function Base.summary(io::IO, sa::AbstractSparseArray)
     )
 end
 Base.length(sa::AbstractSparseArray) = length(_data(sa))
+
 
 function Base.show(io::IO, ::MIME"text/plain", sa::AbstractSparseArray)
     summary(io, sa)
