@@ -301,7 +301,7 @@ end
 end
 
 @testset "JuMP extension" begin
-    
+
     # Test JuMP Extension
     m = Model()
     @variable(m, x[i = 1:3, j = 100:102] >= 0, container = IndexedVarArray)
