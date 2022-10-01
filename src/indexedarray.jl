@@ -4,8 +4,7 @@
     Structure for holding an optimization variable with a sparse structure with extra indexing
 """
 struct IndexedVarArray{N,T} <: AbstractSparseArray{VariableRef,N}
-    model::Model
-    name::Any
+    f::Function
     data::Dictionary{T,VariableRef}
     index_names::NamedTuple
     index_cache::Vector{Dictionary}
@@ -22,8 +21,7 @@ function IndexedVarArray(
     N = length(fieldtypes(Ts))
     dict = Dictionary{T,VariableRef}()
     return model[Symbol(name)] = IndexedVarArray{N,T}(
-        model,
-        name,
+        (ix...) -> createvar(model, name, ix; lower_bound, kw_args...),
         dict,
         index_names,
         Vector{Dictionary}(undef, 2^N),
@@ -46,8 +44,7 @@ function IndexedVarArray(
         (createvar(model, name, k; lower_bound, kw_args...) for k in indices),
     )
     return model[Symbol(name)] = IndexedVarArray{N,T}(
-        model,
-        name,
+        (ix...) -> createvar(model, name, ix; lower_bound, kw_args...),
         dict,
         index_names,
         Vector{Dictionary}(undef, 2^N),
@@ -109,7 +106,7 @@ function insertvar!(
     !valid_index(var, index) && throw(BoundsError(var, index))# "Not a valid index for $(var.name): $index"g
     already_defined(var, index) && error("$(var.name): $index already defined")
 
-    var[index] = createvar(var.model, var.name, index; lower_bound, kw_args...)
+    var[index] = var.f(index...)
 
     clear_cache!(var)
     return var[index]
@@ -127,19 +124,7 @@ function unsafe_insertvar!(
     lower_bound = 0,
     kw_args...,
 ) where {N,T}
-    return var[index] =
-        createvar(var.model, var.name, index; lower_bound, kw_args...)
-
-    #TODO: Reactivate this later
-    # If active caches, update with new variable
-    # cache = _getcache(var.sa, index)
-    # for ind in keys(cache)
-    #     vred = Tuple(val for (i, val) in enumerate(index) if i in ind)
-    #     if !(vred in keys(var.index_cache[ind]))
-    #         var.index_cache[ind][vred] = []
-    #     end
-    #     push!(var.index_cache[ind][vred], index)
-    # end
+    return var[index] = var.f(index...)
 end
 
 joinex(ex1, ex2) = :($ex1..., $ex2...)
@@ -250,4 +235,28 @@ function _getcache(sa::IndexedVarArray{N,T}, pat::P) where {N,T,P}
         sa.index_cache[t] = Dictionary{_decode_nonslices(sa, t),Vector{T}}()
     end
     return sa.index_cache[t]
+end
+
+# Extension for standard JuMP macros
+function Containers.container(
+    f::Function,
+    indices,
+    D::Type{IndexedVarArray},
+    names,
+)
+    iva_names = NamedTuple{tuple(names...)}(indices.prod.iterators)
+    T = Tuple{eltype.(indices.prod.iterators)...}
+    N = length(names)
+    return IndexedVarArray{N,T}(
+        f,
+        Dictionary{T,VariableRef}(),
+        iva_names,
+        Vector{Dictionary}(undef, 2^N),
+    )
+end
+
+# Fallback when no names are provided
+function Containers.container(f::Function, indices, D::Type{IndexedVarArray})
+    index_vars = Symbol.("i$i" for i in 1:length(indices.prod.iterators))
+    return Containers.container(f, indices, D, index_vars)
 end

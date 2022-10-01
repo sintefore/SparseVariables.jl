@@ -33,8 +33,6 @@ function Base.setindex!(sa::AbstractSparseArray{T,N}, val, idx...) where {T,N}
     return setindex!(sa, val, idx)
 end
 
-Base.length(sa::AbstractSparseArray) = length(_data(sa))
-Base.size(sa::AbstractSparseArray) = length(_data(sa))
 Base.keys(sa::AbstractSparseArray) = keys(_data(sa))
 
 function Base.summary(io::IO, sa::AbstractSparseArray)
@@ -47,6 +45,9 @@ function Base.summary(io::IO, sa::AbstractSparseArray)
         isone(num_entries) ? " entry" : " entries",
     )
 end
+Base.length(sa::AbstractSparseArray) = length(_data(sa))
+Base.sum(sa::AbstractSparseArray) = sum(_data(sa))
+
 function Base.show(io::IO, ::MIME"text/plain", sa::AbstractSparseArray)
     summary(io, sa)
     if !iszero(length(_data(sa)))

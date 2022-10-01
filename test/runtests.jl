@@ -299,3 +299,15 @@ end
     SparseVariables.clear_cache!(z3)
     @test length(z3.index_cache[4]) == 0
 end
+
+@testset "JuMP extension" begin
+
+    # Test JuMP Extension
+    m = Model()
+    @variable(m, x[i = 1:3, j = 100:102] >= 0, container = IndexedVarArray)
+    @test length(x) == 0
+    insertvar!(x, 1, 100)
+    @test length(x) == 1
+    unsafe_insertvar!(x, 2, 102)
+    @test length(x) == 2
+end
