@@ -300,6 +300,34 @@ end
     @test length(z3.index_cache[4]) == 0
 end
 
+@testset "Tables IndexedVarArray" begin
+    m = Model()
+    @variable(m, y[car = cars, year = year] >= 0; container = IndexedVarArray)
+    for c in cars
+        insertvar!(y, c, 2002)
+    end
+    @constraint(m, sum(y[:, :]) <= 300)
+    @constraint(
+        m,
+        [i in year],
+        sum(car_cost[c, i] * y[c, i] for (c, i) in SV.select(y, :, i)) <= 200
+    )
+
+    @objective(m, Max, sum(y[c, i] for c in cars, i in year))
+
+    set_optimizer(m, HiGHS.Optimizer)
+    set_optimizer_attribute(m, MOI.Silent(), true)
+    optimize!(m)
+
+    tab = table(y)
+    @test typeof(tab) == SV.SolutionTableIndexed
+
+    @test length(tab) == 3
+
+    r = first(tab)
+    @test typeof(r) == SV.SolutionRow
+end
+
 @testset "JuMP extension" begin
 
     # Test JuMP Extension

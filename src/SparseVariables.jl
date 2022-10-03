@@ -10,8 +10,8 @@ include("sparsearray.jl")
 include("sparsevararray.jl")
 include("macros.jl")
 include("dictionaries.jl")
-include("tables.jl")
 include("indexedarray.jl")
+include("tables.jl")
 
 export SparseArray
 export SparseVarArray

@@ -12,7 +12,7 @@ Base.length(t::SolutionTable) = length(t.var)
 
 struct SolutionRow <: Tables.AbstractRow
     index_vals::Any
-    sol_val::Float64
+    sol_val::Number
     source::SolutionTable
 end
 
@@ -60,6 +60,34 @@ end
 
 table(var::SparseVarArray) = SolutionTableSparse(var)
 table(var::SparseVarArray, name) = SolutionTableSparse(var, name)
+
+struct SolutionTableIndexed <: SolutionTable
+    names::Vector{Symbol}
+    lookup::Dict{Symbol,Int}
+    var::IndexedVarArray
+end
+
+function SolutionTableIndexed(v::IndexedVarArray, name)
+    names = vcat(collect(keys(v.index_names)), name)
+    lookup = Dict(nm => i for (i, nm) in enumerate(names))
+    return SolutionTableIndexed(names, lookup, v)
+end
+
+function SolutionTableIndexed(v::IndexedVarArray)
+    return SolutionTableIndexed(v, :value)
+end
+
+Base.length(t::SolutionTableIndexed) = length(t.var)
+
+function Base.iterate(t::SolutionTableIndexed, state = nothing)
+    next =
+        isnothing(state) ? iterate(keys(t.var.data)) :
+        iterate(keys(t.var.data), state)
+    next === nothing && return nothing
+    return SolutionRow(next[1], JuMP.value(t.var[next[1]]), t), next[2]
+end
+
+table(var::IndexedVarArray) = SolutionTableIndexed(var)
 
 struct SolutionTableDense <: SolutionTable
     names::Vector{Symbol}
