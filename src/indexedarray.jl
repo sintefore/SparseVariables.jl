@@ -253,7 +253,7 @@ function Containers.container(
     V = first(Base.return_types(f))
     return IndexedVarArray{V,N,T}(
         f,
-        Dictionary{T,VariableRef}(),
+        Dictionary{T,V}(),
         iva_names,
         Vector{Dictionary}(undef, 2^N),
     )
