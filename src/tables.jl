@@ -1,135 +1,39 @@
-abstract type SolutionTable end
+_rows(x::Union{SparseArray, SparseVarArray, IndexedVarArray}) = zip(eachindex(x.data), keys(x.data))
 
-Tables.istable(::Type{<:SolutionTable}) = true
-Tables.rowaccess(::Type{<:SolutionTable}) = true
-
-rows(t::SolutionTable) = t
-names(t::SolutionTable) = getfield(t, :names)
-lookup(t::SolutionTable) = getfield(t, :lookup)
-
-Base.eltype(::SolutionTable) = SolutionRow
-Base.length(t::SolutionTable) = length(t.var)
-
-struct SolutionRow <: Tables.AbstractRow
-    index_vals::Any
-    sol_val::Number
-    source::SolutionTable
-end
-
-function Tables.getcolumn(s::SolutionRow, i::Int)
-    if i > length(getfield(s, :index_vals))
-        return getfield(s, :sol_val)
+function JuMP.Containers.rowtable(
+    f::Function,
+    x::AbstractSparseArray;
+    header::Vector{Symbol} = Symbol[],
+)
+    if isempty(header)
+        header = Symbol[Symbol("x$i") for i in 1:ndims(x)]
+        push!(header, :y)
     end
-    return getfield(s, :index_vals)[i]
-end
-
-function Tables.getcolumn(s::SolutionRow, nm::Symbol)
-    i = lookup(getfield(s, :source))[nm]
-    if i > length(getfield(s, :index_vals))
-        return getfield(s, :sol_val)
+    got, want = length(header), ndims(x) + 1
+    if got != want
+        error(
+            "Invalid number of column names provided: Got $got, expected $want.",
+        )
     end
-    return getfield(s, :index_vals)[i]
+    names = tuple(header...)
+    return [NamedTuple{names}((args..., f(x[i]))) for (i, args) in _rows(x)]
 end
 
-Tables.columnnames(s::SolutionRow) = names(getfield(s, :source))
-
-struct SolutionTableSparse <: SolutionTable
-    names::Vector{Symbol}
-    lookup::Dict{Symbol,Int}
-    var::SparseVarArray
+function JuMP.Containers.rowtable(
+    f::Function,
+    x::IndexedVarArray,
+    col_header::Symbol
+)
+    header = Symbol[k for k in keys(x.index_names)]
+    push!(header, col_header)
+    return JuMP.Containers.rowtable(f, x; header = header)
 end
 
-SolutionTableSparse(v::SparseVarArray) = SolutionTableSparse(v, Symbol(v.name))
-
-function SolutionTableSparse(v::SparseVarArray, name)
-    if length(v) > 0 && !has_values(first(v.data).model)
-        error("No solution values available for variable")
-    end
-    names = vcat(v.index_names, name)
-    lookup = Dict(nm => i for (i, nm) in enumerate(names))
-    return SolutionTableSparse(names, lookup, v)
-end
-
-function Base.iterate(t::SolutionTableSparse, state = nothing)
-    next =
-        isnothing(state) ? iterate(keys(t.var.data)) :
-        iterate(keys(t.var.data), state)
-    next === nothing && return nothing
-    return SolutionRow(next[1], JuMP.value(t.var[next[1]]), t), next[2]
-end
-
-table(var::SparseVarArray) = SolutionTableSparse(var)
-table(var::SparseVarArray, name) = SolutionTableSparse(var, name)
-
-struct SolutionTableIndexed <: SolutionTable
-    names::Vector{Symbol}
-    lookup::Dict{Symbol,Int}
-    var::IndexedVarArray
-end
-
-function SolutionTableIndexed(v::IndexedVarArray, name)
-    names = vcat(collect(keys(v.index_names)), name)
-    lookup = Dict(nm => i for (i, nm) in enumerate(names))
-    return SolutionTableIndexed(names, lookup, v)
-end
-
-function SolutionTableIndexed(v::IndexedVarArray)
-    return SolutionTableIndexed(v, :value)
-end
-
-Base.length(t::SolutionTableIndexed) = length(t.var)
-
-function Base.iterate(t::SolutionTableIndexed, state = nothing)
-    next =
-        isnothing(state) ? iterate(keys(t.var.data)) :
-        iterate(keys(t.var.data), state)
-    next === nothing && return nothing
-    return SolutionRow(next[1], JuMP.value(t.var[next[1]]), t), next[2]
-end
-
-table(var::IndexedVarArray) = SolutionTableIndexed(var)
-
-struct SolutionTableDense <: SolutionTable
-    names::Vector{Symbol}
-    lookup::Dict{Symbol,Int}
-    index_lookup::Dict
-    var::Containers.DenseAxisArray
-end
-
-function SolutionTableDense(
-    v::Containers.DenseAxisArray{VariableRef,N,Ax,L},
-    name,
-    colnames...,
-) where {N,Ax,L}
-    if length(colnames) < length(axes(v))
-        error("Not enough column names provided")
-    end
-    if length(v) > 0 && !has_values(first(v).model)
-        error("No solution values available for variable")
-    end
-    names = vcat(colnames..., name)
-    lookup = Dict(nm => i for (i, nm) in enumerate(names))
-    index_lookup = Dict()
-    for (i, ax) in enumerate(v.axes)
-        index_lookup[i] = collect(ax)
-    end
-    return SolutionTableDense(names, lookup, index_lookup, v)
-end
-
-function Base.iterate(t::SolutionTableDense, state = nothing)
-    next =
-        isnothing(state) ? iterate(eachindex(t.var)) :
-        iterate(eachindex(t.var), state)
-    next === nothing && return nothing
-    index = next[1]
-    index_vals = [t.index_lookup[i][index[i]] for i in 1:length(index)]
-    return SolutionRow(index_vals, JuMP.value(t.var[next[1]]), t), next[2]
-end
-
-function table(
-    var::Containers.DenseAxisArray{VariableRef,N,Ax,L},
-    name,
-    colnames...,
-) where {N,Ax,L}
-    return SolutionTableDense(var, name, colnames...)
+function JuMP.Containers.rowtable(
+    f::Function,
+    x::IndexedVarArray
+)
+    header = Symbol[k for k in keys(x.index_names)]
+    push!(header, Symbol(f))
+    return JuMP.Containers.rowtable(f, x; header = header)
 end

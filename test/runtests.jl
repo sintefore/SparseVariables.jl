@@ -1,5 +1,4 @@
 using Base: product
-using DataFrames
 using Dictionaries
 using HiGHS
 using JuMP
@@ -195,23 +194,11 @@ end
     set_optimizer_attribute(m, MOI.Silent(), true)
     optimize!(m)
 
-    tab = table(y)
-    @test typeof(tab) == SV.SolutionTableSparse
-
+    tab = Containers.rowtable(value, y; header=[:car,:year,:value])
     @test length(tab) == 5
 
-    r = first(tab)
-    @test typeof(r) == SV.SolutionRow
+    r = tab[1]
     @test r.car == "bmw"
-
-    t2 = table(u, :u, :car, :year)
-    @test typeof(t2) == SV.SolutionTableDense
-    @test length(t2) == 12
-    rows = collect(t2)
-    @test rows[11].year == 2003
-
-    df = dataframe(u, :u, :car, :year)
-    @test first(df.car) == "ford"
 end
 
 @testset "IndexedVarArray" begin
@@ -319,13 +306,16 @@ end
     set_optimizer_attribute(m, MOI.Silent(), true)
     optimize!(m)
 
-    tab = table(y)
-    @test typeof(tab) == SV.SolutionTableIndexed
+    tab = Containers.rowtable(value, y)
+
+    T = NamedTuple{(:car, :year, :value),Tuple{String,Int,Float64}}
+    @test tab isa Vector{T}
 
     @test length(tab) == 3
-
-    r = first(tab)
-    @test typeof(r) == SV.SolutionRow
+    r = tab[1]
+    @test r.car == "ford"
+    @test r.year == 2002 
+    @test r.value == 300.0
 end
 
 @testset "JuMP extension" begin
