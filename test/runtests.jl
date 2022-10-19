@@ -311,3 +311,43 @@ end
     unsafe_insertvar!(x, 2, 102)
     @test length(x) == 2
 end
+
+# Mockup of custom variable type
+struct MockVariable <: JuMP.AbstractVariable
+    var::JuMP.ScalarVariable
+end
+
+struct MockVariableRef <: JuMP.AbstractVariableRef
+    v::VariableRef
+end
+
+JuMP.name(mv::MockVariableRef) = JuMP.name(mv.v)
+
+struct Mocking end
+
+function JuMP.build_variable(::Function, info::JuMP.VariableInfo, _::Mocking)
+    return MockVariable(JuMP.ScalarVariable(info))
+end
+
+function JuMP.add_variable(model::Model, x::MockVariable, name::String)
+    variable = JuMP.add_variable(model, x.var, name)
+    return MockVariableRef(variable)
+end
+
+@testset "Custom VariableRef" begin
+    m = Model()
+    @variable(
+        m,
+        x[i = 1:3, j = 100:102] >= 0,
+        Mocking(),
+        container = IndexedVarArray
+    )
+    @test length(x) == 0
+    insertvar!(x, 1, 101)
+    @test length(x) == 1
+    @test typeof(first(x[:, :])) <: MockVariableRef
+    insertvar!(x, 1, 100)
+    @test length(x) == 2
+    @test sum(x) == sum(x[:, :])
+    @test typeof(sum(x)) <: GenericAffExpr{Float64,MockVariableRef}
+end

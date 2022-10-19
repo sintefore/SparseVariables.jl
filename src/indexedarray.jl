@@ -1,11 +1,11 @@
 """
-    IndexedVarArray{N,T}
+    IndexedVarArray{V,N,T}
 
     Structure for holding an optimization variable with a sparse structure with extra indexing
 """
-struct IndexedVarArray{N,T} <: AbstractSparseArray{VariableRef,N}
+struct IndexedVarArray{V<:AbstractVariableRef,N,T} <: AbstractSparseArray{V,N}
     f::Function
-    data::Dictionary{T,VariableRef}
+    data::Dictionary{T,V}
     index_names::NamedTuple
     index_cache::Vector{Dictionary}
 end
@@ -20,7 +20,7 @@ function IndexedVarArray(
     T = Tuple{eltype.(fieldtypes(Ts))...}
     N = length(fieldtypes(Ts))
     dict = Dictionary{T,VariableRef}()
-    return model[Symbol(name)] = IndexedVarArray{N,T}(
+    return model[Symbol(name)] = IndexedVarArray{VariableRef,N,T}(
         (ix...) -> createvar(model, name, ix; lower_bound, kw_args...),
         dict,
         index_names,
@@ -43,7 +43,7 @@ function IndexedVarArray(
         indices,
         (createvar(model, name, k; lower_bound, kw_args...) for k in indices),
     )
-    return model[Symbol(name)] = IndexedVarArray{N,T}(
+    return model[Symbol(name)] = IndexedVarArray{VariableRef,N,T}(
         (ix...) -> createvar(model, name, ix; lower_bound, kw_args...),
         dict,
         index_names,
@@ -93,18 +93,18 @@ function clear_cache!(var)
 end
 
 """
-    insertvar!(var::IndexedVarArray{N,T}, index...; lower_bound = 0, kw_args...)
+    insertvar!(var::IndexedVarArray{V,N,T}, index...; lower_bound = 0, kw_args...)
 
 Insert a new variable with the given index only after checking if keys are valid and not already defined.
 """
 function insertvar!(
-    var::IndexedVarArray{N,T},
+    var::IndexedVarArray{V,N,T},
     index...;
     lower_bound = 0,
     kw_args...,
-) where {N,T}
+) where {V,N,T}
     !valid_index(var, index) && throw(BoundsError(var, index))# "Not a valid index for $(var.name): $index"g
-    already_defined(var, index) && error("$(var.name): $index already defined")
+    already_defined(var, index) && error("$index already defined for array")
 
     var[index] = var.f(index...)
 
@@ -113,17 +113,17 @@ function insertvar!(
 end
 
 """
-    unsafe_insertvar!(var::indexedVarArray{N,T}, index...; lower_bound = 0, kw_args...)
+    unsafe_insertvar!(var::indexedVarArray{V,N,T}, index...; lower_bound = 0, kw_args...)
 
 Insert a new variable with the given index withouth checking if the index is valid or 
  already assigned.
 """
 function unsafe_insertvar!(
-    var::IndexedVarArray{N,T},
+    var::IndexedVarArray{V,N,T},
     index...;
     lower_bound = 0,
     kw_args...,
-) where {N,T}
+) where {V,N,T}
     return var[index] = var.f(index...)
 end
 
@@ -147,7 +147,7 @@ joinex(ex1, ex2) = :($ex1..., $ex2...)
     return :(tuple($(exs[end])...))
 end
 
-function build_cache!(cache, pat, sa::IndexedVarArray{N,T}) where {N,T}
+function build_cache!(cache, pat, sa::IndexedVarArray{V,N,T}) where {V,N,T}
     if isempty(cache)
         for v in keys(sa)
             vred = _active(v, pat)
@@ -158,7 +158,7 @@ function build_cache!(cache, pat, sa::IndexedVarArray{N,T}) where {N,T}
     return cache
 end
 
-function _select_cached(sa::IndexedVarArray{N,T}, pat) where {N,T}
+function _select_cached(sa::IndexedVarArray{V,N,T}, pat) where {V,N,T}
     # TODO: Benchmark to find good cutoff-value for caching
     # TODO: Return same type for type stability
     length(_data(sa)) < 100 && return _select_gen(keys(_data(sa)), pat)
@@ -208,7 +208,7 @@ Non-colons count as 1, colons as 0, which are binary encoded to an integer.
     return :($i)
 end
 
-function _decode_nonslices(::IndexedVarArray{N,T}, v::Integer) where {N,T}
+function _decode_nonslices(::IndexedVarArray{V,N,T}, v::Integer) where {V,N,T}
     fts = fieldtypes(T)
     return Tuple{
         (fts[i] for (i, c) in enumerate(last(bitstring(v), N)) if c == '1')...,
@@ -216,18 +216,21 @@ function _decode_nonslices(::IndexedVarArray{N,T}, v::Integer) where {N,T}
 end
 
 """
-    _decode_nonslices(::IndexedVarArray{N,T}, ::P)
+    _decode_nonslices(::IndexedVarArray{V,N,T}, ::P)
 
 Reconstruct types of a pattern from the array types and the pattern type
 """
-@generated function _decode_nonslices(::IndexedVarArray{N,T}, ::P) where {N,T,P}
+@generated function _decode_nonslices(
+    ::IndexedVarArray{V,N,T},
+    ::P,
+) where {V,N,T,P}
     fts = fieldtypes(T)
     fts2 = fieldtypes(P)
     t = Tuple{(fts[i] for (i, v) in enumerate(fts2) if v != Colon)...}
     return :($t)
 end
 
-function _getcache(sa::IndexedVarArray{N,T}, pat::P) where {N,T,P}
+function _getcache(sa::IndexedVarArray{V,N,T}, pat::P) where {V,N,T,P}
     t = _get_cache_index(pat)
     if isassigned(sa.index_cache, t)
         return sa.index_cache[t]
@@ -247,9 +250,10 @@ function Containers.container(
     iva_names = NamedTuple{tuple(names...)}(indices.prod.iterators)
     T = Tuple{eltype.(indices.prod.iterators)...}
     N = length(names)
-    return IndexedVarArray{N,T}(
+    V = first(Base.return_types(f))
+    return IndexedVarArray{V,N,T}(
         f,
-        Dictionary{T,VariableRef}(),
+        Dictionary{T,V}(),
         iva_names,
         Vector{Dictionary}(undef, 2^N),
     )
