@@ -194,7 +194,7 @@ end
     set_optimizer_attribute(m, MOI.Silent(), true)
     optimize!(m)
 
-    tab = Containers.rowtable(value, y; header=[:car,:year,:value])
+    tab = Containers.rowtable(value, y; header = [:car, :year, :value])
     @test length(tab) == 5
 
     r = tab[1]
@@ -314,7 +314,7 @@ end
     @test length(tab) == 3
     r = tab[1]
     @test r.car == "ford"
-    @test r.year == 2002 
+    @test r.year == 2002
     @test r.value == 300.0
 end
 

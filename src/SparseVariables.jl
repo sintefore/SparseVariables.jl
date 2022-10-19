@@ -18,5 +18,4 @@ export @sparsevariable
 export insertvar!
 export unsafe_insertvar!
 
-
 end # module

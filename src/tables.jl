@@ -1,4 +1,6 @@
-_rows(x::Union{SparseArray, SparseVarArray, IndexedVarArray}) = zip(eachindex(x.data), keys(x.data))
+function _rows(x::Union{SparseArray,SparseVarArray,IndexedVarArray})
+    return zip(eachindex(x.data), keys(x.data))
+end
 
 function JuMP.Containers.rowtable(
     f::Function,
@@ -22,17 +24,14 @@ end
 function JuMP.Containers.rowtable(
     f::Function,
     x::IndexedVarArray,
-    col_header::Symbol
+    col_header::Symbol,
 )
     header = Symbol[k for k in keys(x.index_names)]
     push!(header, col_header)
     return JuMP.Containers.rowtable(f, x; header = header)
 end
 
-function JuMP.Containers.rowtable(
-    f::Function,
-    x::IndexedVarArray
-)
+function JuMP.Containers.rowtable(f::Function, x::IndexedVarArray)
     header = Symbol[k for k in keys(x.index_names)]
     push!(header, Symbol(f))
     return JuMP.Containers.rowtable(f, x; header = header)
