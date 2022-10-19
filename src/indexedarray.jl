@@ -93,15 +93,13 @@ function clear_cache!(var)
 end
 
 """
-    insertvar!(var::IndexedVarArray{V,N,T}, index...; lower_bound = 0, kw_args...)
+    insertvar!(var::IndexedVarArray{V,N,T}, index...)
 
 Insert a new variable with the given index only after checking if keys are valid and not already defined.
 """
 function insertvar!(
     var::IndexedVarArray{V,N,T},
-    index...;
-    lower_bound = 0,
-    kw_args...,
+    index...
 ) where {V,N,T}
     !valid_index(var, index) && throw(BoundsError(var, index))# "Not a valid index for $(var.name): $index"g
     already_defined(var, index) && error("$index already defined for array")
@@ -113,16 +111,14 @@ function insertvar!(
 end
 
 """
-    unsafe_insertvar!(var::indexedVarArray{V,N,T}, index...; lower_bound = 0, kw_args...)
+    unsafe_insertvar!(var::indexedVarArray{V,N,T}, index...)
 
 Insert a new variable with the given index withouth checking if the index is valid or 
  already assigned.
 """
 function unsafe_insertvar!(
     var::IndexedVarArray{V,N,T},
-    index...;
-    lower_bound = 0,
-    kw_args...,
+    index...
 ) where {V,N,T}
     return var[index] = var.f(index...)
 end
