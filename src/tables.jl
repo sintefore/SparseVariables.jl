@@ -33,23 +33,6 @@ end
 
 Tables.columnnames(s::SolutionRow) = names(getfield(s, :source))
 
-struct SolutionTableSparse <: SolutionTable
-    names::Vector{Symbol}
-    lookup::Dict{Symbol,Int}
-    var::SparseVarArray
-end
-
-SolutionTableSparse(v::SparseVarArray) = SolutionTableSparse(v, Symbol(v.name))
-
-function SolutionTableSparse(v::SparseVarArray, name)
-    if length(v) > 0 && !has_values(first(v.data).model)
-        error("No solution values available for variable")
-    end
-    names = vcat(v.index_names, name)
-    lookup = Dict(nm => i for (i, nm) in enumerate(names))
-    return SolutionTableSparse(names, lookup, v)
-end
-
 function Base.iterate(t::SolutionTableSparse, state = nothing)
     next =
         isnothing(state) ? iterate(keys(t.var.data)) :
@@ -58,8 +41,6 @@ function Base.iterate(t::SolutionTableSparse, state = nothing)
     return SolutionRow(next[1], JuMP.value(t.var[next[1]]), t), next[2]
 end
 
-table(var::SparseVarArray) = SolutionTableSparse(var)
-table(var::SparseVarArray, name) = SolutionTableSparse(var, name)
 
 struct SolutionTableDense <: SolutionTable
     names::Vector{Symbol}

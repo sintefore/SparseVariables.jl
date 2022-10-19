@@ -10,66 +10,66 @@ struct IndexedVarArray{V<:AbstractVariableRef,N,T} <: AbstractSparseArray{V,N}
     index_cache::Vector{Dictionary}
 end
 
-function IndexedVarArray(
-    model::Model,
-    name::AbstractString,
-    index_names::NamedTuple{Ns,Ts};
-    lower_bound = 0,
-    kw_args...,
-) where {Ns,Ts}
-    T = Tuple{eltype.(fieldtypes(Ts))...}
-    N = length(fieldtypes(Ts))
-    dict = Dictionary{T,VariableRef}()
-    return model[Symbol(name)] = IndexedVarArray{VariableRef,N,T}(
-        (ix...) -> createvar(model, name, ix; lower_bound, kw_args...),
-        dict,
-        index_names,
-        Vector{Dictionary}(undef, 2^N),
-    )
-end
+# function IndexedVarArray(
+#     model::Model,
+#     name::AbstractString,
+#     index_names::NamedTuple{Ns,Ts};
+#     lower_bound = 0,
+#     kw_args...,
+# ) where {Ns,Ts}
+#     T = Tuple{eltype.(fieldtypes(Ts))...}
+#     N = length(fieldtypes(Ts))
+#     dict = Dictionary{T,VariableRef}()
+#     return model[Symbol(name)] = IndexedVarArray{VariableRef,N,T}(
+#         (ix...) -> createvar(model, name, ix; lower_bound, kw_args...),
+#         dict,
+#         index_names,
+#         Vector{Dictionary}(undef, 2^N),
+#     )
+# end
 
-function IndexedVarArray(
-    model::Model,
-    name::AbstractString,
-    index_names::NamedTuple{Ns,Ts},
-    indices::Vector{T};
-    lower_bound = 0,
-    kw_args...,
-) where {Ns,Ts,T}
-    @assert T == Tuple{eltype.(fieldtypes(Ts))...}
-    N = length(fieldtypes(Ts))
-    # TODO: Check if each index is valid
-    dict = Dictionary(
-        indices,
-        (createvar(model, name, k; lower_bound, kw_args...) for k in indices),
-    )
-    return model[Symbol(name)] = IndexedVarArray{VariableRef,N,T}(
-        (ix...) -> createvar(model, name, ix; lower_bound, kw_args...),
-        dict,
-        index_names,
-        Vector{Dictionary}(undef, 2^N),
-    )
-end
+# function IndexedVarArray(
+#     model::Model,
+#     name::AbstractString,
+#     index_names::NamedTuple{Ns,Ts},
+#     indices::Vector{T};
+#     lower_bound = 0,
+#     kw_args...,
+# ) where {Ns,Ts,T}
+#     @assert T == Tuple{eltype.(fieldtypes(Ts))...}
+#     N = length(fieldtypes(Ts))
+#     # TODO: Check if each index is valid
+#     dict = Dictionary(
+#         indices,
+#         (createvar(model, name, k; lower_bound, kw_args...) for k in indices),
+#     )
+#     return model[Symbol(name)] = IndexedVarArray{VariableRef,N,T}(
+#         (ix...) -> createvar(model, name, ix; lower_bound, kw_args...),
+#         dict,
+#         index_names,
+#         Vector{Dictionary}(undef, 2^N),
+#     )
+# end
 
-function IndexedVarArray(
-    model::Model,
-    name::AbstractString,
-    index_names::NamedTuple{Ns,Ts},
-    indices::Dictionaries.Indices{T};
-    lower_bound = 0,
-    kw_args...,
-) where {Ns,Ts,T}
-    @assert T == Tuple{eltype.(fieldtypes(Ts))...}
-    N = length(fieldtypes(Ts))
-    return IndexedVarArray(
-        model,
-        name,
-        index_names,
-        collect(indices);
-        lower_bound,
-        kw_args...,
-    )
-end
+# function IndexedVarArray(
+#     model::Model,
+#     name::AbstractString,
+#     index_names::NamedTuple{Ns,Ts},
+#     indices::Dictionaries.Indices{T};
+#     lower_bound = 0,
+#     kw_args...,
+# ) where {Ns,Ts,T}
+#     @assert T == Tuple{eltype.(fieldtypes(Ts))...}
+#     N = length(fieldtypes(Ts))
+#     return IndexedVarArray(
+#         model,
+#         name,
+#         index_names,
+#         collect(indices);
+#         lower_bound,
+#         kw_args...,
+#     )
+# end
 
 _data(sa::IndexedVarArray) = sa.data
 

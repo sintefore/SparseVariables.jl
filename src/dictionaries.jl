@@ -196,12 +196,6 @@ function select(dict::Dictionary, indices)
     return getindices(dict, select(keys(dict), indices))
 end
 select(dict, f::Function) = filter(f, dict)
-function kselect(sa::SparseVarArray, sh_pat::NamedTuple)
-    return select(keys(sa.data), sh_pat, get_index_names(sa))
-end
-function select(sa::SparseVarArray, sh_pat::NamedTuple)
-    return Dictionaries.getindices(sa, kselect(sa, sh_pat))
-end
 
 function select_test(dict, indices, cache)
     return cache ? _select_cached(dict, indices) :
