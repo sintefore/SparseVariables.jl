@@ -41,7 +41,6 @@ function Base.iterate(t::SolutionTableSparse, state = nothing)
     return SolutionRow(next[1], JuMP.value(t.var[next[1]]), t), next[2]
 end
 
-
 struct SolutionTableDense <: SolutionTable
     names::Vector{Symbol}
     lookup::Dict{Symbol,Int}

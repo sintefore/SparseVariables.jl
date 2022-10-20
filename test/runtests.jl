@@ -228,7 +228,7 @@ end
     # @variable(m, y[cars=cars, year=year]; container=IndexedVarArray)
     # @test length(y) == length(car_cost)
 
-    @variable(m, z[cars=cars, year=year]; container=IndexedVarArray)
+    @variable(m, z[cars = cars, year = year]; container = IndexedVarArray)
     # z = IndexedVarArray(m, "z", (cars = cars, year = year))
     for (cr, yr) in keys(car_cost)
         insertvar!(z, cr, yr)
@@ -254,7 +254,7 @@ end
     @test length(z) == 5
 
     # Alternative constructor
-    @variable(m, z2[cars=cars, year=year], container=IndexedVarArray)
+    @variable(m, z2[cars = cars, year = year], container = IndexedVarArray)
     for k in keys(car_cost)
         insertvar!(z2, k...)
     end
@@ -276,7 +276,16 @@ end
         ),
     )
 
-    @variable(m, z3[cars=valid_cars, year=valid_years, color=valid_colors, km=valid_kms]; container=IndexedVarArray)
+    @variable(
+        m,
+        z3[
+            cars = valid_cars,
+            year = valid_years,
+            color = valid_colors,
+            km = valid_kms,
+        ];
+        container = IndexedVarArray
+    )
     for k in more_indices
         insertvar!(z3, k...)
     end
