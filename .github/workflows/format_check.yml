@@ -19,7 +19,7 @@ jobs:
         run: |
           using Pkg
           # If you update the version, also update the style guide docs.
-          Pkg.add(PackageSpec(name="JuliaFormatter", version="1.0.8"))
+          Pkg.add(PackageSpec(name="JuliaFormatter", version="1.0.13"))
           using JuliaFormatter
           format("."; verbose = true)
           out = String(read(Cmd(`git diff`)))
