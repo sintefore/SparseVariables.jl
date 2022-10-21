@@ -69,7 +69,7 @@ end
             rand(valid_colors, N),
             rand(valid_kms, N),
         ),
-    );
+    )
     push!(valid_cars, "lotus")
     push!(valid_cars, "rolls royce")
     push!(valid_colors, "white")
@@ -77,9 +77,19 @@ end
     push!(more_indices, ("lotus", 1957, "white", 21332))
     push!(more_indices, ("rolls royce", 1950, "black", 37219))
 
-    @variable(m, car_vars[maker = valid_cars, year = valid_years, color = valid_colors, kms = valid_kms]; container = IndexedVarArray);
-    @test typeof(car_vars) == IndexedVarArray{VariableRef, 4,Tuple{String, Int64, String, Int64}}
-    
+    @variable(
+        m,
+        car_vars[
+            maker = valid_cars,
+            year = valid_years,
+            color = valid_colors,
+            kms = valid_kms,
+        ];
+        container = IndexedVarArray
+    )
+    @test typeof(car_vars) ==
+          IndexedVarArray{VariableRef,4,Tuple{String,Int64,String,Int64}}
+
     for c in more_indices
         insertvar!(car_vars, c...)
     end
@@ -107,7 +117,6 @@ end
 end
 
 @testset "Repurposed from SparseVarArray" begin
-    
     valid_cars = ["bmw", "ford", "opel", "mazda", "volvo"]
     valid_years = 1980:2021
     valid_colors = ["red", "green", "black", "blue", "gray"]
@@ -116,16 +125,25 @@ end
     push!(valid_cars, "rolls royce")
     push!(valid_colors, "white")
     valid_years = 1950:2021
-    
+
     m = Model()
-    @variable(m, y[c=valid_cars, i=valid_years]; container=IndexedVarArray)
+    @variable(
+        m,
+        y[c = valid_cars, i = valid_years];
+        container = IndexedVarArray
+    )
     for (c, i) in collect(keys(car_cost))
         insertvar!(y, c, i)
     end
 
     @test typeof(y) == IndexedVarArray{VariableRef,2,Tuple{String,Int}}
 
-    @variable(m, w[c=valid_cars, i=valid_years], Bin; container=IndexedVarArray)
+    @variable(
+        m,
+        w[c = valid_cars, i = valid_years],
+        Bin;
+        container = IndexedVarArray
+    )
     for (c, i) in collect(keys(car_cost))
         insertvar!(w, c, i)
     end
@@ -166,7 +184,7 @@ end
 
 @testset "Caching" begin
     m = Model()
-    
+
     N = 998
     valid_cars = ["bmw", "ford", "opel", "mazda", "volvo"]
     valid_years = 1980:2021
@@ -179,25 +197,32 @@ end
             rand(valid_colors, N),
             rand(valid_kms, N),
         ),
-    );
+    )
     push!(valid_cars, "lotus")
     push!(valid_cars, "rolls royce")
     push!(valid_colors, "white")
     valid_years = 1950:2021
     push!(more_indices, ("lotus", 1957, "white", 21332))
     push!(more_indices, ("rolls royce", 1950, "black", 37219))
-    @variable(m, y[c=valid_cars, i=valid_years]; container=IndexedVarArray)
-    @variable(m, w[c=valid_cars, i=valid_years], Bin; container=IndexedVarArray)
+    @variable(
+        m,
+        y[c = valid_cars, i = valid_years];
+        container = IndexedVarArray
+    )
+    @variable(
+        m,
+        w[c = valid_cars, i = valid_years],
+        Bin;
+        container = IndexedVarArray
+    )
     for (c, i) in keys(car_cost)
         insertvar!(y, c, i)
         insertvar!(w, c, i)
     end
 
-
-
     @constraint(m, con1, sum(y[:, 2001]) <= 300)
     @test length(y.index_cache) == 4
-    
+
     # @test length(y.index_cache[(2,)]) == 4
     # @test length(y.index_cache[(2,)][(2002,)]) == 1
 
@@ -230,7 +255,7 @@ end
 #     m = Model()
 #     # @sparsevariable(m, y[car, year] for (car, year) in collect(keys(car_cost)))
 #     # @sparsevariable(m, z[car, year])
-    
+
 #     @variable(m, y[car=valid_cars, year=valid_years]; container=IndexedVarArray)
 #     for (car, year) in keys(car_cost)
 #         insertvar!(y, car, year)
