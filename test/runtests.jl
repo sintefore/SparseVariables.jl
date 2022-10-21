@@ -88,7 +88,7 @@ end
         container = IndexedVarArray
     )
     @test typeof(car_vars) ==
-          IndexedVarArray{VariableRef,4,Tuple{String,Int64,String,Int64}}
+          IndexedVarArray{VariableRef,4,Tuple{String,Int,String,Int}}
 
     for c in more_indices
         insertvar!(car_vars, c...)
