@@ -8,13 +8,6 @@ function Base.getindex(
     return get(_data(sa), idx, zero(T))
 end
 
-function Base.getindex(
-    sa::AbstractSparseArray{T,N},
-    idx::NamedTuple,
-) where {T,N}
-    return select(sa, idx)
-end
-
 function Base.getindex(sa::AbstractSparseArray{T,N}, idx...) where {T,N}
     length(idx) != N && throw(BoundsError(sa, idx))
     return _getindex(sa, idx)

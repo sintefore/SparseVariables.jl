@@ -198,23 +198,7 @@ function select_test(dict, indices, cache)
            _select_gen(keys(dict), indices)
 end
 
-function _select_cached(sa, pat)
-    indices = Tuple(i for (i, v) in enumerate(pat) if v !== Colon())
-    vals = Tuple(v for v in pat if v !== Colon())
-
-    if !(indices in keys(sa.index_cache))
-        index = Dict()
-        for v in keys(sa)
-            vred = Tuple(val for (i, val) in enumerate(v) if i in indices)
-            if !(vred in keys(index))
-                index[vred] = []
-            end
-            push!(index[vred], v)
-        end
-        sa.index_cache[indices] = index
-    end
-    return get(sa.index_cache[indices], vals, [])
-end
+function _select_cached(sa, pat) end
 
 function permfromnames(names::NamedTuple, patnames)
     perm = (names[i] for i in patnames)
