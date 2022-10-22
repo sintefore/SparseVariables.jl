@@ -15,7 +15,6 @@ function Base.getindex(
     return select(sa, idx)
 end
 
-
 function Base.getindex(sa::AbstractSparseArray{T,N}, idx...) where {T,N}
     length(idx) != N && throw(BoundsError(sa, idx))
     return _getindex(sa, idx)
