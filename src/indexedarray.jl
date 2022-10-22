@@ -193,3 +193,10 @@ function Containers.container(f::Function, indices, D::Type{IndexedVarArray})
     index_vars = Symbol.("i$i" for i in 1:length(indices.prod.iterators))
     return Containers.container(f, indices, D, index_vars)
 end
+
+function Base.firstindex(sa::IndexedVarArray, d)
+    return first(sort(sa.index_names[d]))
+end
+function Base.lastindex(sa::IndexedVarArray, d)
+    return last(sort(sa.index_names[d]))
+end

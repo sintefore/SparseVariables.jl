@@ -8,6 +8,14 @@ function Base.getindex(
     return get(_data(sa), idx, zero(T))
 end
 
+function Base.getindex(
+    sa::AbstractSparseArray{T,N},
+    idx::NamedTuple,
+) where {T,N}
+    return select(sa, idx)
+end
+
+
 function Base.getindex(sa::AbstractSparseArray{T,N}, idx...) where {T,N}
     length(idx) != N && throw(BoundsError(sa, idx))
     return _getindex(sa, idx)
@@ -54,9 +62,8 @@ function Base.show(io::IO, ::MIME"text/plain", sa::AbstractSparseArray)
         end
     end
 end
-Base.show(io::IO, sa::AbstractSparseArray) = show(_data(sa))
+Base.show(io::IO, sa::AbstractSparseArray) = show(io, _data(sa))
 
-# TODO: For performance, precalculate these and store in sa:
 function Base.firstindex(sa::AbstractSparseArray, d)
     return minimum(x -> x[d], _data(sa).indices)
 end

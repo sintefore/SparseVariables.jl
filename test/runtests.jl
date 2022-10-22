@@ -81,6 +81,26 @@ end
 
     @test length(car_cost) == 5
     @test car_cost["lotus", 1957] == 500
+
+    # show
+    @test length(sprint(show, "text/plain", car_cost)) > 100
+    @test occursin("SparseArray", sprint(show,"text/plain", car_cost))
+
+    @test !occursin("SparseArray", sprint(show, car_cost))
+    @test occursin("(\"bmw\", 2001) = 200", sprint(show, car_cost))
+
+    # select
+    @test length(SparseVariables.select(car_cost, ("ford", :))) == 2
+
+    # summary
+    @test startswith(sprint(summary, car_cost), "SparseArray{")
+
+    # constructors
+    @test typeof(SparseArray(Dict(1=>2, 2=>2))) == SparseArray{Int64, 1, Tuple{Int64}}
+    @test typeof(SparseArray{Int,3}()) == SparseArray{Int64, 3, Tuple{Any, Any, Any}}
+    @test length(SparseArray{Int,3}()) == 0
+    @test typeof(SparseArray{Int,3,NTuple{3,String}}()) == SparseArray{Int64, 3, Tuple{String, String, String}}
+    @test length(SparseArray{Int64, 3, Tuple{String, String, String}}()) == 0
 end
 
 @testset "Repurposed from SparseVarArray" begin
