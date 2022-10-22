@@ -97,13 +97,13 @@ end
 
     # constructors
     @test typeof(SparseArray(Dict(1 => 2, 2 => 2))) ==
-          SparseArray{Int64,1,Tuple{Int64}}
+          SparseArray{Int,1,Tuple{Int}}
     @test typeof(SparseArray{Int,3}()) ==
-          SparseArray{Int64,3,Tuple{Any,Any,Any}}
+          SparseArray{Int,3,Tuple{Any,Any,Any}}
     @test length(SparseArray{Int,3}()) == 0
     @test typeof(SparseArray{Int,3,NTuple{3,String}}()) ==
-          SparseArray{Int64,3,Tuple{String,String,String}}
-    @test length(SparseArray{Int64,3,Tuple{String,String,String}}()) == 0
+          SparseArray{Int,3,Tuple{String,String,String}}
+    @test length(SparseArray{Int,3,Tuple{String,String,String}}()) == 0
 end
 
 @testset "Repurposed from SparseVarArray" begin
