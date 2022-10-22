@@ -98,8 +98,7 @@ end
     # constructors
     @test typeof(SparseArray(Dict(1 => 2, 2 => 2))) ==
           SparseArray{Int,1,Tuple{Int}}
-    @test typeof(SparseArray{Int,3}()) ==
-          SparseArray{Int,3,Tuple{Any,Any,Any}}
+    @test typeof(SparseArray{Int,3}()) == SparseArray{Int,3,Tuple{Any,Any,Any}}
     @test length(SparseArray{Int,3}()) == 0
     @test typeof(SparseArray{Int,3,NTuple{3,String}}()) ==
           SparseArray{Int,3,Tuple{String,String,String}}
