@@ -1,7 +1,3 @@
-function variable_name(var::String, index)
-    return var * "[" * join(index, ", ") * "]"
-end
-
 """
     make_filter_fun(c, pos)
 

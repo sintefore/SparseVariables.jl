@@ -208,6 +208,13 @@ end
     @test length(z3.index_cache[4]) == length(unique(i[2] for i in indices))
     SparseVariables.clear_cache!(z3)
     @test length(z3.index_cache[4]) == 0
+
+    # Begin/End
+    @test length(z3[:,begin:2000,:,:]) == length(filter(x->x[2]<=2000, indices))
+    @test length(z3[:,1990:end,:,:]) == length(filter(x->x[2]>=1990, indices))
+    @test length(z3[:,1990:2000,:,:]) == length(filter(x->x[2]>=1990 && x[2]<=2000, indices))
+
+
 end
 
 @testset "JuMP extension" begin
