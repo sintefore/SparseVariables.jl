@@ -1,6 +1,15 @@
 TimeStructures release notes
 ===================================
 
+
+Version 0.7.0 (2022-mm-dd)
+--------------------------
+* Major cleanup and improved test coverage
+* Breaking changes:
+    - Remove `SparseVarArray' in favor of `IndexedVarArray`
+    - Remove custom macros and constructors in favor of exending standard JuMP macros
+    - Remove support for `DataFrame` and custom `Tables.jl` interface in favor of exending upstreamed Tables support in JuMP
+
 Version 0.6.2 (2022-09-19)
 --------------------------
 * Add IndexedVarArray that checks for valid indices on insert and has improved performance
