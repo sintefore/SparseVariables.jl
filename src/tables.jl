@@ -2,7 +2,9 @@ function _rows(x::Union{SparseArray,SparseVarArray,IndexedVarArray})
     return zip(eachindex(x.data), keys(x.data))
 end
 
-function JuMP.Containers.rowtable(
+# The rowtable functions should be moved to the JuMP.Containers namespace 
+# when Tables support is available in JuMP 
+function rowtable(
     f::Function,
     x::AbstractSparseArray;
     header::Vector{Symbol} = Symbol[],
@@ -21,18 +23,14 @@ function JuMP.Containers.rowtable(
     return [NamedTuple{names}((args..., f(x[i]))) for (i, args) in _rows(x)]
 end
 
-function JuMP.Containers.rowtable(
-    f::Function,
-    x::IndexedVarArray,
-    col_header::Symbol,
-)
+function rowtable(f::Function, x::IndexedVarArray, col_header::Symbol)
     header = Symbol[k for k in keys(x.index_names)]
     push!(header, col_header)
-    return JuMP.Containers.rowtable(f, x; header = header)
+    return rowtable(f, x; header = header)
 end
 
-function JuMP.Containers.rowtable(f::Function, x::IndexedVarArray)
+function rowtable(f::Function, x::IndexedVarArray)
     header = Symbol[k for k in keys(x.index_names)]
     push!(header, Symbol(f))
-    return JuMP.Containers.rowtable(f, x; header = header)
+    return rowtable(f, x; header = header)
 end

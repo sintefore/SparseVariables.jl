@@ -194,7 +194,7 @@ end
     set_optimizer_attribute(m, MOI.Silent(), true)
     optimize!(m)
 
-    tab = Containers.rowtable(value, y; header = [:car, :year, :value])
+    tab = SparseVariables.rowtable(value, y; header = [:car, :year, :value])
     @test length(tab) == 5
 
     r = tab[1]
@@ -306,7 +306,7 @@ end
     set_optimizer_attribute(m, MOI.Silent(), true)
     optimize!(m)
 
-    tab = Containers.rowtable(value, y)
+    tab = SparseVariables.rowtable(value, y)
 
     T = NamedTuple{(:car, :year, :value),Tuple{String,Int,Float64}}
     @test tab isa Vector{T}
