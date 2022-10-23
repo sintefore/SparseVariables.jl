@@ -308,13 +308,13 @@ end
 
     tab = SparseVariables.rowtable(value, y)
 
-    T = NamedTuple{(:car, :year, :value),Tuple{String,Int,Float64}}
+    T = NamedTuple{(:i1, :i2, :value),Tuple{String,Int,Float64}}
     @test tab isa Vector{T}
 
     @test length(tab) == 3
     r = tab[1]
-    @test r.car == "ford"
-    @test r.year == 2002
+    @test r.i1 == "ford"
+    @test r.i2 == 2002
     @test r.value == 300.0
 end
 
