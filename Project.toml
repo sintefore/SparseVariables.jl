@@ -7,6 +7,7 @@ version = "0.7.0"
 Dictionaries = "85a47980-9c8c-11e8-2b9f-f7ca1fa99fb4"
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+SnoopPrecompile = "66db9d55-30c0-4569-8b51-7e840670fc0c"
 
 [compat]
 Dictionaries = "0.3"
