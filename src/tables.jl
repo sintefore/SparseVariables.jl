@@ -1,4 +1,4 @@
-function _rows(x::Union{SparseArray,SparseVarArray,IndexedVarArray})
+function _rows(x::Union{SparseArray,IndexedVarArray})
     return zip(eachindex(x.data), keys(x.data))
 end
 
