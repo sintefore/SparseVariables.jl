@@ -2,6 +2,10 @@ TimeStructures release notes
 ===================================
 
 
+Version 0.7.1 (2022-mm-dd)
+--------------------------
+* Extend JuMP.Containers.rowtable for `Tables.jl` support
+
 Version 0.7.0 (2022-10-25)
 --------------------------
 * Major cleanup and improved test coverage
