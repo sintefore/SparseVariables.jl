@@ -8,6 +8,7 @@ using SnoopPrecompile
 include("sparsearray.jl")
 include("dictionaries.jl")
 include("indexedarray.jl")
+include("tables.jl")
 
 export SparseArray
 export IndexedVarArray

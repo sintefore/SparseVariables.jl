@@ -1,5 +1,4 @@
 using Base: product
-using DataFrames
 using Dictionaries
 using HiGHS
 using JuMP
@@ -156,23 +155,6 @@ end
     # @test length(z["mazda", 1990:2002]) == 1
 end
 
-@testset "Caching" begin
-    (; cars, years, colors, kms, indices) = testdata()
-    (; car_cost) = testdata1()
-
-    m = Model()
-
-    @variable(m, y[c = cars, i = years]; container = IndexedVarArray)
-    @variable(m, w[c = cars, i = years], Bin; container = IndexedVarArray)
-    for (c, i) in keys(car_cost)
-        insertvar!(y, c, i)
-        insertvar!(w, c, i)
-    end
-
-    @constraint(m, con1, sum(y[:, 2001]) <= 300)
-    @test length(y.index_cache) == 4
-end
-
 @testset "IndexedVarArray" begin
     m = Model()
     (; cars, year, car_cost) = testdata1(false)
@@ -238,6 +220,39 @@ end
           length(filter(x -> x[2] >= 1990, indices))
     @test length(z3[:, 1990:2000, :, :]) ==
           length(filter(x -> x[2] >= 1990 && x[2] <= 2000, indices))
+end
+
+@testset "Tables IndexedVarArray" begin
+    (; cars, year, car_cost) = testdata1(false)
+
+    m = Model()
+    @variable(m, y[car = cars, year = year] >= 0; container = IndexedVarArray)
+    for c in cars
+        insertvar!(y, c, 2002)
+    end
+    @constraint(m, sum(y[:, :]) <= 300)
+    @constraint(
+        m,
+        [i in year],
+        sum(car_cost[c, i] * y[c, i] for (c, i) in SV.select(y, :, i)) <= 200
+    )
+
+    @objective(m, Max, sum(y[c, i] for c in cars, i in year))
+
+    set_optimizer(m, HiGHS.Optimizer)
+    set_optimizer_attribute(m, MOI.Silent(), true)
+    optimize!(m)
+
+    tab = SparseVariables.rowtable(value, y)
+
+    T = NamedTuple{(:i1, :i2, :value),Tuple{String,Int,Float64}}
+    @test tab isa Vector{T}
+
+    @test length(tab) == 3
+    r = tab[1]
+    @test r.i1 == "ford"
+    @test r.i2 == 2002
+    @test r.value == 300.0
 end
 
 @testset "JuMP extension" begin
