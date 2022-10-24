@@ -1,5 +1,4 @@
 using Base: product
-using DataFrames
 using Dictionaries
 using HiGHS
 using JuMP
@@ -195,23 +194,11 @@ end
     set_optimizer_attribute(m, MOI.Silent(), true)
     optimize!(m)
 
-    tab = table(y)
-    @test typeof(tab) == SV.SolutionTableSparse
-
+    tab = SparseVariables.rowtable(value, y; header = [:car, :year, :value])
     @test length(tab) == 5
 
-    r = first(tab)
-    @test typeof(r) == SV.SolutionRow
+    r = tab[1]
     @test r.car == "bmw"
-
-    t2 = table(u, :u, :car, :year)
-    @test typeof(t2) == SV.SolutionTableDense
-    @test length(t2) == 12
-    rows = collect(t2)
-    @test rows[11].year == 2003
-
-    df = dataframe(u, :u, :car, :year)
-    @test first(df.car) == "ford"
 end
 
 @testset "IndexedVarArray" begin
@@ -298,6 +285,37 @@ end
           length(unique(i[2] for i in more_indices))
     SparseVariables.clear_cache!(z3)
     @test length(z3.index_cache[4]) == 0
+end
+
+@testset "Tables IndexedVarArray" begin
+    m = Model()
+    @variable(m, y[car = cars, year = year] >= 0; container = IndexedVarArray)
+    for c in cars
+        insertvar!(y, c, 2002)
+    end
+    @constraint(m, sum(y[:, :]) <= 300)
+    @constraint(
+        m,
+        [i in year],
+        sum(car_cost[c, i] * y[c, i] for (c, i) in SV.select(y, :, i)) <= 200
+    )
+
+    @objective(m, Max, sum(y[c, i] for c in cars, i in year))
+
+    set_optimizer(m, HiGHS.Optimizer)
+    set_optimizer_attribute(m, MOI.Silent(), true)
+    optimize!(m)
+
+    tab = SparseVariables.rowtable(value, y)
+
+    T = NamedTuple{(:i1, :i2, :value),Tuple{String,Int,Float64}}
+    @test tab isa Vector{T}
+
+    @test length(tab) == 3
+    r = tab[1]
+    @test r.i1 == "ford"
+    @test r.i2 == 2002
+    @test r.value == 300.0
 end
 
 @testset "JuMP extension" begin
