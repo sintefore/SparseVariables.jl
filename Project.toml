@@ -12,4 +12,5 @@ SnoopPrecompile = "66db9d55-30c0-4569-8b51-7e840670fc0c"
 [compat]
 Dictionaries = "0.3"
 JuMP = "1"
+SnoopPrecompile = "1"
 julia = "1.6"
