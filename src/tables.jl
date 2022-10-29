@@ -23,7 +23,11 @@ function JuMP.Containers.rowtable(
     return [NamedTuple{names}((args..., f(x[i]))) for (i, args) in _rows(x)]
 end
 
-function JuMP.Containers.rowtable(f::Function, x::IndexedVarArray, col_header::Symbol)
+function JuMP.Containers.rowtable(
+    f::Function,
+    x::IndexedVarArray,
+    col_header::Symbol,
+)
     header = Symbol[k for k in keys(x.index_names)]
     push!(header, col_header)
     return rowtable(f, x; header = header)
