@@ -75,3 +75,29 @@ end
 @constraint(m, sum(z[endswith("a"), iseven]) >= 1)
 ```
 
+## Solution information
+
+The [Tables.jl](https://github.com/JuliaData/Tables.jl) support has now been [upstreamed to JuMP](https://github.com/jump-dev/JuMP.jl/pull/3104), and is also supported for `IndexedVarArray`s:
+
+```julia
+using HiGHS
+
+# Solve m
+set_optimizer(m, HiGHS.Optimizer)
+optimize!(m)
+
+# Fetch solution
+tab = JuMP.Containers.rowtable(value, y)
+
+# Save to CSV
+using CSV
+CSV.write("result.csv", tab)
+
+# Convert to DataFrame
+using DataFrames
+DataFrame(tab)
+
+# Pretty print
+using PrettyTables
+pretty_table(tab)
+```

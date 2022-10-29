@@ -1,7 +1,7 @@
 name = "SparseVariables"
 uuid = "2749762c-80ed-4b14-8f33-f0736679b02b"
 authors = ["Truls Flatberg <Truls.Flatberg@sintef.no>", "Lars Hellemo <Lars.Hellemo@sintef.no>"]
-version = "0.7.0"
+version = "0.7.1"
 
 [deps]
 Dictionaries = "85a47980-9c8c-11e8-2b9f-f7ca1fa99fb4"
@@ -11,6 +11,6 @@ SnoopPrecompile = "66db9d55-30c0-4569-8b51-7e840670fc0c"
 
 [compat]
 Dictionaries = "0.3"
-JuMP = "1"
+JuMP = "1.4.0"
 SnoopPrecompile = "1"
 julia = "1.6"

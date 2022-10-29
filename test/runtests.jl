@@ -243,15 +243,15 @@ end
     set_optimizer_attribute(m, MOI.Silent(), true)
     optimize!(m)
 
-    tab = SparseVariables.rowtable(value, y)
+    tab = JuMP.Containers.rowtable(value, y)
 
-    T = NamedTuple{(:i1, :i2, :value),Tuple{String,Int,Float64}}
+    T = NamedTuple{(:car, :year, :value),Tuple{String,Int,Float64}}
     @test tab isa Vector{T}
 
     @test length(tab) == 3
     r = tab[1]
-    @test r.i1 == "ford"
-    @test r.i2 == 2002
+    @test r.car == "ford"
+    @test r.year == 2002
     @test r.value == 300.0
 end
 
@@ -265,6 +265,14 @@ end
     @test length(x) == 1
     unsafe_insertvar!(x, 2, 102)
     @test length(x) == 2
+
+    # When no names are provided
+    @variable(m, y[1:3, 100:102] >= 0, container = IndexedVarArray)
+    @test length(y) == 0
+    insertvar!(y, 1, 100)
+    @test length(y) == 1
+    unsafe_insertvar!(y, 2, 102)
+    @test length(y) == 2
 end
 
 # Mockup of custom variable type
