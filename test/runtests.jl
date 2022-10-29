@@ -265,6 +265,14 @@ end
     @test length(x) == 1
     unsafe_insertvar!(x, 2, 102)
     @test length(x) == 2
+
+    # When no names are provided
+    @variable(m, y[1:3, 100:102] >= 0, container = IndexedVarArray)
+    @test length(y) == 0
+    insertvar!(y, 1, 100)
+    @test length(y) == 1
+    unsafe_insertvar!(y, 2, 102)
+    @test length(y) == 2
 end
 
 # Mockup of custom variable type
