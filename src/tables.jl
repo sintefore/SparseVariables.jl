@@ -2,8 +2,6 @@ function _rows(x::Union{SparseArray,IndexedVarArray})
     return zip(eachindex(x.data), keys(x.data))
 end
 
-# The rowtable functions should be moved to the JuMP.Containers namespace 
-# when Tables support is available in JuMP 
 function JuMP.Containers.rowtable(
     f::Function,
     x::AbstractSparseArray;
@@ -36,5 +34,5 @@ end
 function JuMP.Containers.rowtable(f::Function, x::IndexedVarArray)
     header = Symbol[k for k in keys(x.index_names)]
     push!(header, Symbol(f))
-    return rowtable(f, x; header = header)
+    return JuMP.Containers.rowtable(f, x; header = header)
 end

@@ -243,15 +243,15 @@ end
     set_optimizer_attribute(m, MOI.Silent(), true)
     optimize!(m)
 
-    tab = SparseVariables.rowtable(value, y)
+    tab = JuMP.Containers.rowtable(value, y)
 
-    T = NamedTuple{(:i1, :i2, :value),Tuple{String,Int,Float64}}
+    T = NamedTuple{(:car, :year, :value),Tuple{String,Int,Float64}}
     @test tab isa Vector{T}
 
     @test length(tab) == 3
     r = tab[1]
-    @test r.i1 == "ford"
-    @test r.i2 == 2002
+    @test r.car == "ford"
+    @test r.year == 2002
     @test r.value == 300.0
 end
 
