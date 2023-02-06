@@ -362,4 +362,6 @@ end
     @test length(t1) == length(t3)
     @test typeof(t1) == typeof(t2)
     @test typeof(t2) == typeof(t3)
+    @test typeof(t2[first(D)...]) == VariableRef
+    @test count(i -> isodd(first(i)), D) == length(t1[isodd, :, :])
 end
