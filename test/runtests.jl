@@ -314,3 +314,52 @@ end
     @test sum(x) == sum(x[:, :])
     @test typeof(sum(x)) <: GenericAffExpr{Float64,MockVariableRef}
 end
+
+@testset "Fast initialization" begin
+    sparse_keys(N) = unique((rand(1:N), rand(1:N), rand(1:N)) for _ in 1:N)
+    N = 100_000
+    D = sparse_keys(N)
+
+    function test1(N, D) # Replace data
+        model = Model()
+        @variable(
+            model,
+            x[i = 1:N, j = 1:N, k = 1:N],
+            container = IndexedVarArray
+        )
+        SparseVariables.unsafe_initializevars!(x, D)
+        return x
+    end
+
+    function test2(N, D) # Insert iteratively
+        model = Model()
+        @variable(
+            model,
+            x[i = 1:N, j = 1:N, k = 1:N],
+            container = IndexedVarArray
+        )
+        @inbounds for d in D
+            SparseVariables.unsafe_insertvar!(x, d...)
+        end
+        return x
+    end
+
+    function test3(N, D) # Update data with from new Dictionary
+        model = Model()
+        @variable(
+            model,
+            x[i = 1:N, j = 1:N, k = 1:N],
+            container = IndexedVarArray
+        )
+        SparseVariables.unsafe_initializevars_alt!(x, D)
+        return x
+    end
+
+    t1 = test1(N, D)
+    t2 = test2(N, D)
+    t3 = test3(N, D)
+    @test length(t1) == length(t2)
+    @test length(t1) == length(t3)
+    @test typeof(t1) == typeof(t2)
+    @test typeof(t2) == typeof(t3)
+end
