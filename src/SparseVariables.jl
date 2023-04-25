@@ -3,7 +3,7 @@ module SparseVariables
 using Dictionaries
 using JuMP
 using LinearAlgebra
-using SnoopPrecompile
+using PrecompileTools
 
 include("sparsearray.jl")
 include("dictionaries.jl")
@@ -15,7 +15,7 @@ export IndexedVarArray
 export insertvar!
 export unsafe_insertvar!
 
-@precompile_setup begin
+@setup_workload begin
     # Putting some things in `setup` can reduce the size of the
     # precompile file and potentially make loading faster.
     rs = 1:10
@@ -24,7 +24,7 @@ export unsafe_insertvar!
     sys = [:a, :b]
     m = Model()
 
-    @precompile_all_calls begin
+    @compile_workload begin
         # all calls in this block will be precompiled, regardless of whether
         # they belong to your package or not (on Julia 1.8 and higher)
 
