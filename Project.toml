@@ -1,7 +1,7 @@
 name = "SparseVariables"
 uuid = "2749762c-80ed-4b14-8f33-f0736679b02b"
 authors = ["Truls Flatberg <Truls.Flatberg@sintef.no>", "Lars Hellemo <Lars.Hellemo@sintef.no>"]
-version = "0.7.1"
+version = "0.7.2"
 
 [deps]
 Dictionaries = "85a47980-9c8c-11e8-2b9f-f7ca1fa99fb4"
