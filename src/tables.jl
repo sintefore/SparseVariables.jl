@@ -28,7 +28,7 @@ function JuMP.Containers.rowtable(
 )
     header = Symbol[k for k in keys(x.index_names)]
     push!(header, col_header)
-    return rowtable(f, x; header = header)
+    return JuMP.Containers.rowtable(f, x; header = header)
 end
 
 function JuMP.Containers.rowtable(f::Function, x::IndexedVarArray)
