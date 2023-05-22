@@ -254,12 +254,12 @@ end
     @test r.year == 2002
     @test r.value == 300.0
 
-    tab_cust = JuMP.Containers.rowtable(value, y; header = [:Car,:Year,:Value])
+    tab_cust =
+        JuMP.Containers.rowtable(value, y; header = [:Car, :Year, :Value])
     r = first(tab_cust)
     @test r.Car == "ford"
     @test r.Year == 2002
     @test r.Value == 300.0
-
 end
 
 @testset "JuMP extension" begin
