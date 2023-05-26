@@ -294,7 +294,11 @@ function model_sparse(F, C, P, T, D, U, V, W)
     m = Model()
 
     # Variable creation
-    @variable(m, x[factory=F, customer=C, product=P, period=T], container=IndexedVarArray)
+    @variable(
+        m,
+        x[factory = F, customer = C, product = P, period = T],
+        container = IndexedVarArray
+    )
 
     for f in F, (c, p, t) in keys(D)
         if W[f, p] == 1
@@ -385,7 +389,6 @@ md"# Check [SparseVariables.jl](https://github.com/hellemo/SparseVariables.jl) o
 md"## "
 
 # ╔═╡ 9d8b6754-1c49-4f4f-b1ad-f5d8eac427c1
-
 
 # ╔═╡ 4376b3c0-d008-49f3-8b28-d22f6a30324c
 md"
