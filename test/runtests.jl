@@ -273,6 +273,9 @@ end
     unsafe_insertvar!(x, 2, 102)
     @test length(x) == 2
 
+    insertvar!(x, UnsafeInsert(), 2, 103)
+    @test length(x) == 3
+
     # When no names are provided
     @variable(m, y[1:3, 100:102] >= 0, container = IndexedVarArray)
     @test length(y) == 0
