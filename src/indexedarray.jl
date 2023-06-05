@@ -10,7 +10,6 @@ struct IndexedVarArray{V<:AbstractVariableRef,N,T} <: AbstractSparseArray{V,N}
     index_cache::Vector{Dictionary}
 end
 
-
 struct SafeInsert end
 struct UnsafeInsert end
 
@@ -40,8 +39,14 @@ end
 
 Insert a new variable with the given index only after checking if keys are valid and not already defined.
 """
-insertvar!(var::IndexedVarArray{V,N,T}, index...) where{V,N,T} = insertvar!(var, SafeInsert(), index...)
-function insertvar!(var::IndexedVarArray{V,N,T},::SafeInsert=SafeInsert(), index...) where {V,N,T}
+function insertvar!(var::IndexedVarArray{V,N,T}, index...) where {V,N,T}
+    return insertvar!(var, SafeInsert(), index...)
+end
+function insertvar!(
+    var::IndexedVarArray{V,N,T},
+    ::SafeInsert = SafeInsert(),
+    index...,
+) where {V,N,T}
     !valid_index(var, index) && throw(BoundsError(var, index))# "Not a valid index for $(var.name): $index"g
     already_defined(var, index) && error("$index already defined for array")
     var[index] = var.f(index...)
@@ -49,7 +54,11 @@ function insertvar!(var::IndexedVarArray{V,N,T},::SafeInsert=SafeInsert(), index
     return var[index]
 end
 
-function insertvar!(var::IndexedVarArray{V,N,T},::UnsafeInsert, index..., ) where {V,N,T}
+function insertvar!(
+    var::IndexedVarArray{V,N,T},
+    ::UnsafeInsert,
+    index...,
+) where {V,N,T}
     return var[index] = var.f(index...)
 end
 
@@ -60,7 +69,7 @@ Insert a new variable with the given index withouth checking if the index is val
  already assigned.
 """
 function unsafe_insertvar!(var::IndexedVarArray{V,N,T}, index...) where {V,N,T}
-    insertvar!(var, UnsafeInsert(), index...)
+    return insertvar!(var, UnsafeInsert(), index...)
 end
 
 joinex(ex1, ex2) = :($ex1..., $ex2...)
