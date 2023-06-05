@@ -14,6 +14,7 @@ export SparseArray
 export IndexedVarArray
 export insertvar!
 export unsafe_insertvar!
+export SafeInsert, UnsafeInsert
 
 @setup_workload begin
     # Putting some things in `setup` can reduce the size of the
