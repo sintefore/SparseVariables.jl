@@ -10,6 +10,8 @@ include("dictionaries.jl")
 include("indexedarray.jl")
 include("tables.jl")
 
+include("translate.jl")
+
 export SparseArray
 export IndexedVarArray
 export insertvar!

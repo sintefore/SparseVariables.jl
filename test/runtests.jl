@@ -324,3 +324,31 @@ end
     @test sum(x) == sum(x[:, :])
     @test typeof(sum(x)) <: GenericAffExpr{Float64,MockVariableRef}
 end
+
+@testset "TranslateVarArray" begin
+    # Demo custom types
+    abstract type Node end
+    struct Source <: Node
+        id::Int
+    end
+    struct Sink <: Node
+        id::Int
+    end
+
+    # Translation to type-stable index
+    SV.translate(n::Node) = n.id
+    SV.translate(::Type{<:Node}) = Int
+
+    # Test variable construction
+    m = Model()
+    @variable(
+        m,
+        x[i = Source.(1:10), j = Sink.(1:10)],
+        container = SV.TranslateVarArray
+    )
+    for i in Source.(1:10), j in Sink.(1:10)
+        insertvar!(x, i, j)
+    end
+    @test length(x) == 100
+    @test typeof(x) == SV.TranslateVarArray{VariableRef,2,Tuple{Int,Int}}
+end
