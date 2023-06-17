@@ -341,14 +341,33 @@ end
 
     # Test variable construction
     m = Model()
+    # length < 100 -> filtering (no cache)
     @variable(
         m,
-        x[i = Source.(1:10), j = Sink.(1:10)],
+        x[i = Source.(1:10), j = Sink.(1:5)],
         container = SV.TranslateVarArray
     )
-    for i in Source.(1:10), j in Sink.(1:10)
+    for i in Source.(1:10), j in Sink.(1:5)
         insertvar!(x, i, j)
     end
-    @test length(x) == 100
+    @test length(x) == 50
     @test typeof(x) == SV.TranslateVarArray{VariableRef,2,Tuple{Int,Int}}
+    @test length(x[:, 1]) == 10
+    @test length(x[1, :]) == 5
+    @test length(x[1:2, :]) == 10
+
+    # length > 100 -> cache
+    @variable(
+        m,
+        y[i = Source.(1:10), j = Sink.(1:15)],
+        container = SV.TranslateVarArray
+    )
+    for i in Source.(1:10), j in Sink.(1:15)
+        insertvar!(y, i, j)
+    end
+    @test length(y) == 150
+    @test typeof(y) == SV.TranslateVarArray{VariableRef,2,Tuple{Int,Int}}
+    @test length(y[:, 1]) == 10
+    @test length(y[1, :]) == 15
+    @test length(y[1:2, :]) == 30
 end

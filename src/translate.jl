@@ -120,3 +120,37 @@ function _select_cached(sa::TranslateVarArray{V,N,T}, pat) where {V,N,T}
     vals = _dropslices_gen(tpat)
     return get!(cache, vals, T[])
 end
+
+function _getcache(sa::TranslateVarArray{V,N,T}, pat::P) where {V,N,T,P}
+    t = _get_cache_index(pat)
+    if isassigned(sa.index_cache, t)
+        return sa.index_cache[t]
+    else
+        sa.index_cache[t] = Dictionary{_decode_nonslices(sa, t),Vector{T}}()
+    end
+    return sa.index_cache[t]
+end
+
+"""
+    _decode_nonslices(::IndexedVarArray{V,N,T}, ::P)
+
+Reconstruct types of a pattern from the array types and the pattern type
+"""
+@generated function _decode_nonslices(
+    ::TranslateVarArray{V,N,T},
+    ::P,
+) where {V,N,T,P}
+    fts = fieldtypes(T)
+    fts2 = fieldtypes(P)
+    t = Tuple{
+        (translate(fts[i]) for (i, v) in enumerate(fts2) if v != Colon)...,
+    }
+    return :($t)
+end
+
+function _decode_nonslices(::TranslateVarArray{V,N,T}, v::Integer) where {V,N,T}
+    fts = fieldtypes(T)
+    return Tuple{
+        (fts[i] for (i, c) in enumerate(last(bitstring(v), N)) if c == '1')...,
+    }
+end
