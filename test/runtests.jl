@@ -370,7 +370,8 @@ end
     @test length(y[:, 1]) == 10
     @test length(y[1, :]) == 15
     @test length(y[1:2, :]) == 30
-
+    @test typeof(x[Source(1), Sink(2)]) == VariableRef
+    
     # Tables
     @test length(Containers.rowtable(x)) == 50
     @test length(Containers.rowtable(x; header = [:x, :y, :z])) == 50
