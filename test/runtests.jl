@@ -373,5 +373,7 @@ end
 
     # Tables
     @test length(Containers.rowtable(x)) == 50
+    @test length(Containers.rowtable(x; header = [:x, :y, :z])) == 50
     @test length(Containers.rowtable(y)) == 150
+    @test length(Containers.rowtable(y; header = [:x, :y, :z])) == 150
 end
