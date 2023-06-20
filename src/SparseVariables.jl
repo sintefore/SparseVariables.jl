@@ -8,12 +8,13 @@ using PrecompileTools
 include("sparsearray.jl")
 include("dictionaries.jl")
 include("indexedarray.jl")
+include("translate.jl")
 include("tables.jl")
 
-include("translate.jl")
 
 export SparseArray
 export IndexedVarArray
+export TranslateVarArray
 export insertvar!
 export unsafe_insertvar!
 export SafeInsert, UnsafeInsert

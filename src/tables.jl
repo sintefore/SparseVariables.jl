@@ -1,4 +1,6 @@
-function Containers._rows(x::Union{SparseArray,IndexedVarArray})
+function Containers._rows(
+    x::Union{SparseArray,IndexedVarArray,TranslateVarArray},
+)
     return zip(eachindex(x.data), keys(x.data))
 end
 

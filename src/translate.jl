@@ -154,3 +154,19 @@ function _decode_nonslices(::TranslateVarArray{V,N,T}, v::Integer) where {V,N,T}
         (fts[i] for (i, c) in enumerate(last(bitstring(v), N)) if c == '1')...,
     }
 end
+
+function JuMP.Containers.rowtable(
+    f::Function,
+    x::TranslateVarArray,
+    col_header::Symbol,
+)
+    header = Symbol[k for k in keys(x.index_names)]
+    push!(header, col_header)
+    return JuMP.Containers.rowtable(f, x; header = header)
+end
+
+function JuMP.Containers.rowtable(f::Function, x::TranslateVarArray)
+    header = Symbol[k for k in keys(x.index_names)]
+    push!(header, Symbol(f))
+    return JuMP.Containers.rowtable(f, x; header = header)
+end

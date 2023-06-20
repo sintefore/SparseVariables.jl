@@ -370,4 +370,8 @@ end
     @test length(y[:, 1]) == 10
     @test length(y[1, :]) == 15
     @test length(y[1:2, :]) == 30
+
+    # Tables
+    @test length(Containers.rowtable(x)) == 50
+    @test length(Containers.rowtable(y)) == 150
 end
