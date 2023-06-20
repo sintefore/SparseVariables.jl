@@ -11,7 +11,6 @@ include("indexedarray.jl")
 include("translate.jl")
 include("tables.jl")
 
-
 export SparseArray
 export IndexedVarArray
 export TranslateVarArray
