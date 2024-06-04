@@ -1,7 +1,7 @@
 name = "SparseVariables"
 uuid = "2749762c-80ed-4b14-8f33-f0736679b02b"
 authors = ["Truls Flatberg <Truls.Flatberg@sintef.no>", "Lars Hellemo <Lars.Hellemo@sintef.no>"]
-version = "0.7.2"
+version = "0.7.3"
 
 [deps]
 Dictionaries = "85a47980-9c8c-11e8-2b9f-f7ca1fa99fb4"
@@ -10,7 +10,7 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 
 [compat]
-Dictionaries = "0.3"
+Dictionaries = "0.4"
 JuMP = "1.4.0"
 PrecompileTools = "1"
 julia = "1.6"

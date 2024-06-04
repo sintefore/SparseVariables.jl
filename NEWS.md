@@ -1,6 +1,14 @@
 TimeStructures release notes
 ===================================
 
+Version 0.7.3 (2024-06-04)
+--------------------------
+* Allow Dictionaries v0.4
+
+Version 0.7.2 (2023-05-22)
+--------------------------
+* Migrate from SnoopPrecompile to PrecompileTools
+* Add missing package names
 
 Version 0.7.1 (2022-10-29)
 --------------------------
