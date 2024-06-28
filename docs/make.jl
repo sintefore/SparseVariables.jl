@@ -1,4 +1,4 @@
-using Documenter, JuMP, SparseVariables
+using Documenter, JuMP, SparseVariables, HiGHS, CSV, DataFrames, PrettyTables
 
 pages = [
     "Introduction" => "index.md",
@@ -16,7 +16,7 @@ Documenter.makedocs(
         edit_link = "main",
         assets = String[],
     ),
-    doctest = false,
+    doctest = true,
     #modules = [SparseVariables],
     pages = pages,
 )

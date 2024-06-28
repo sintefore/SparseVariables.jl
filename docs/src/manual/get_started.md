@@ -2,9 +2,10 @@
 
 ## Usage
 
-```julia
+```jldoctest readme_example
 using JuMP
 using SparseVariables
+using HiGHS
 
 const SV = SparseVariables
 
@@ -34,7 +35,12 @@ end
 for c in ["opel", "tesla", "nikola"]
     insertvar!(z, c, 2002)
 end
+# output
+ERROR: BoundsError: attempt to access IndexedVarArray{VariableRef, 2, Tuple{String, Int64}} with 1 entry at index ["tesla", 2002]
 
+```
+
+```jldoctest readme_example
 # Skip tests for allowed values for maximum performance.
 # Note that this will allow creating values outside the defined
 # sets, as long as the type is correct.
@@ -55,19 +61,24 @@ end
 
 # Filter using functions on indices
 @constraint(m, sum(z[endswith("a"), iseven]) >= 1)
+
+# Solve m
+set_optimizer(m, optimizer_with_attributes(HiGHS.Optimizer, MOI.Silent()=>true))
+optimize!(m)
+
+termination_status(m)
+
+# output
+
+OPTIMAL::TerminationStatusCode = 1
+
 ```
 
 ## Solution information
 
-The [Tables.jl](https://github.com/JuliaData/Tables.jl) support has now been [upstreamed to JuMP](https://github.com/jump-dev/JuMP.jl/pull/3104), and is also supported for `IndexedVarArray`s:
+The [Tables.jl](https://github.com/JuliaData/Tables.jl) support has now been [upstreamed to JuMP](https://github.com/jump-dev/JuMP.jl/pull/3104), and is also supported for `IndexedVarArray`s, which makes it easy to get solutions for all indices at once and e.g. save to a CSV file or import into a `DataFrame`:
 
-```julia
-using HiGHS
-
-# Solve m
-set_optimizer(m, HiGHS.Optimizer)
-optimize!(m)
-
+```jldoctest readme_example
 # Fetch solution
 tab = JuMP.Containers.rowtable(value, y)
 
@@ -79,7 +90,33 @@ CSV.write("result.csv", tab)
 using DataFrames
 DataFrame(tab)
 
-# Pretty print
+# output
+
+4×3 DataFrame
+ Row │ car     year   value
+     │ String  Int64  Float64
+─────┼────────────────────────
+   1 │ bmw      2001      1.5
+   2 │ ford     2001      0.0
+   3 │ ford     2000      3.0
+   4 │ bmw      2002      1.0
+```
+
+The results may also be pretty-printed in the terminal using `PrettyTables`:
+
+```jldoctest readme_example
 using PrettyTables
 pretty_table(tab)
+
+# output
+
+┌────────┬───────┬─────────┐
+│    car │  year │   value │
+│ String │ Int64 │ Float64 │
+├────────┼───────┼─────────┤
+│    bmw │  2001 │     1.5 │
+│   ford │  2001 │     0.0 │
+│   ford │  2000 │     3.0 │
+│    bmw │  2002 │     1.0 │
+└────────┴───────┴─────────┘
 ```
