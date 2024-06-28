@@ -21,4 +21,4 @@ Documenter.makedocs(
     pages = pages,
 )
 
-Documenter.deploydocs(; repo = "github.com/sintefore/SparseVariables.jl.git")
+Documenter.deploydocs(; repo = "github.com/sintefore/SparseVariables.jl.git", push_preview = true)
