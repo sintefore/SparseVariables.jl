@@ -1,3 +1,4 @@
 /.vscode
-/Manifest.toml
+Manifest.toml
 /tutorial/Manifest.toml
+docs/build
