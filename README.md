@@ -2,6 +2,7 @@
 
 [![Build Status](https://github.com/hellemo/SparseVariables.jl/workflows/CI/badge.svg?branch=main)](https://github.com/hellemo/SparseVariables.jl/actions?query=workflow%3ACI)
 [![codecov](https://codecov.io/gh/hellemo/SparseVariables.jl/branch/main/graph/badge.svg?token=2LXGVU04YS)](https://codecov.io/gh/hellemo/SparseVariables.jl)
+[![In Development](https://img.shields.io/badge/docs-dev-blue.svg)](https://sintefore.github.io/SparseVariables.jl/dev/)
 
 Add container type(s) for improved performance and easier handling of sparse data 
 and sparse arrays of optimizaton variables in [JuMP](https://jump.dev/JuMP.jl/stable/). 
