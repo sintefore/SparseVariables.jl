@@ -1,22 +1,4 @@
-# SparseVariables.jl
-
-[![Build Status](https://github.com/hellemo/SparseVariables.jl/workflows/CI/badge.svg?branch=main)](https://github.com/hellemo/SparseVariables.jl/actions?query=workflow%3ACI)
-[![codecov](https://codecov.io/gh/hellemo/SparseVariables.jl/branch/main/graph/badge.svg?token=2LXGVU04YS)](https://codecov.io/gh/hellemo/SparseVariables.jl)
-
-Add container type(s) for improved performance and easier handling of sparse data 
-and sparse arrays of optimizaton variables in [JuMP](https://jump.dev/JuMP.jl/stable/). 
-
-Watch the JuliaCon/JuMP-dev 2022 lightning talk and check out the [notebook with examples and benchmarks]("docs/notebook_juliacon2022.jl"): 
-
-[![SparseVariables - Efficient sparse modelling with JuMP](https://img.youtube.com/vi/YuDvfZo9W5A/3.jpg)](https://youtu.be/YuDvfZo9W5A)
-
-2022-09: Updated benchmarks of time spent on model construction with different number of variables (see [benchmark notebook for details](benchmark/benchmark.jl)) with additional types `IndexedVarArray` (model_indexed) and `SparseAxisArray` (model_sparse_aa) on current julia master:
-
-![](benchmark/res.svg)
-
-Benchmarks with time spent on model construction with different level of sparsity:
-
-![](benchmark/sparsity.svg)
+# Get Started
 
 ## Usage
 
