@@ -3,11 +3,12 @@
 
     Structure for holding an optimization variable with a sparse structure with extra indexing
 """
-struct IndexedVarArray{V<:AbstractVariableRef,N,T} <: AbstractSparseArray{V,N}
-    f::Function
+mutable struct IndexedVarArray{V<:AbstractVariableRef,N,T} <:
+               AbstractSparseArray{V,N}
+    const f::Function
     data::Dictionary{T,V}
-    index_names::NamedTuple
-    index_cache::Vector{Dictionary}
+    const index_names::NamedTuple
+    const index_cache::Vector{Dictionary}
 end
 
 struct SafeInsert end
@@ -70,6 +71,28 @@ Insert a new variable with the given index withouth checking if the index is val
 """
 function unsafe_insertvar!(var::IndexedVarArray{V,N,T}, index...) where {V,N,T}
     return insertvar!(var, UnsafeInsert(), index...)
+end
+
+"""
+    unsafe_initializevars!(var::IndexedVarArray{V,N,T}, indices)
+
+Initialize a variable `var` with all `indices` at once without checking for valid indices or 
+    if it already has data for maximum performance.
+"""
+function unsafe_initializevars!(
+    var::IndexedVarArray{V,N,T},
+    indices,
+) where {V,N,T}
+    var.data = Dictionary(indices, (var.f(i...) for i in indices))
+    return var
+end
+
+function unsafe_initializevars_alt!(
+    var::IndexedVarArray{V,N,T},
+    indices,
+) where {V,N,T}
+    merge!(var.data, Dictionary(indices, (var.f(i...) for i in indices)))
+    return var
 end
 
 joinex(ex1, ex2) = :($ex1..., $ex2...)
