@@ -7,11 +7,12 @@
 Add container type(s) for improved performance and easier handling of sparse data 
 and sparse arrays of optimizaton variables in [JuMP](https://jump.dev/JuMP.jl/stable/). 
 
-Watch the JuliaCon/JuMP-dev 2022 lightning talk and check out the [notebook with examples and benchmarks]("docs/notebook_juliacon2022.jl"): 
+Watch the JuliaCon/JuMP-dev 2022 lightning talk and check out the [notebook with examples and benchmarks](docs/notebook_juliacon2022.jl) (Note that the syntax
+has been updated since the presentation): 
 
 [![SparseVariables - Efficient sparse modelling with JuMP](https://img.youtube.com/vi/YuDvfZo9W5A/3.jpg)](https://youtu.be/YuDvfZo9W5A)
 
-2022-09: Updated benchmarks of time spent on model construction with different number of variables (see [benchmark notebook for details](benchmark/benchmark.jl)) with additional types `IndexedVarArray` (model_indexed) and `SparseAxisArray` (model_sparse_aa) on current julia master:
+2022-09: Updated benchmarks of time spent on model construction with different number of variables (see [benchmark notebook for details](benchmark/benchmarks.jl)) with additional types `IndexedVarArray` (model_sparse) and `SparseAxisArray` (model_sparse_aa) on current julia master:
 
 ![](benchmark/res.svg)
 
@@ -32,12 +33,12 @@ m = Model()
 cars = ["ford", "bmw", "opel"]
 years = [2000, 2001, 2002, 2003]
 
-car_cost = SparseArray(Dict(
+car_cost = Dict(
     ("ford", 2000) => 100,
     ("ford", 2001) => 150,
     ("bmw", 2001) => 200,
     ("bmw", 2002) => 300
-    ))
+)
 
 
 # Empty variables with 2 indices and allowed index values specified
