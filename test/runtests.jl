@@ -324,3 +324,59 @@ end
     @test sum(x) == sum(x[:, :])
     @test typeof(sum(x)) <: GenericAffExpr{Float64,MockVariableRef}
 end
+
+@testset "TranslateVarArray" begin
+    # Demo custom types
+    abstract type Node end
+    struct Source <: Node
+        id::Int
+    end
+    struct Sink <: Node
+        id::Int
+    end
+
+    # Translation to type-stable index
+    SV.translate(n::Node) = n.id
+    SV.translate(::Type{<:Node}) = Int
+
+    # Test variable construction
+    m = Model()
+    # length < 100 -> filtering (no cache)
+    @variable(
+        m,
+        x[i = Source.(1:10), j = Sink.(1:5)],
+        container = SV.TranslateVarArray
+    )
+    for i in Source.(1:10), j in Sink.(1:5)
+        insertvar!(x, i, j)
+    end
+    @test length(x) == 50
+    @test typeof(x) == SV.TranslateVarArray{VariableRef,2,Tuple{Int,Int}}
+    @test length(x[:, 1]) == 10
+    @test length(x[1, :]) == 5
+    @test length(x[1:2, :]) == 10
+
+    # length > 100 -> cache
+    @variable(
+        m,
+        y[i = Source.(1:10), j = Sink.(1:15)],
+        container = SV.TranslateVarArray
+    )
+    for i in Source.(1:10), j in Sink.(1:15)
+        insertvar!(y, i, j)
+    end
+    @test length(y) == 150
+    @test typeof(y) == SV.TranslateVarArray{VariableRef,2,Tuple{Int,Int}}
+    @test length(y[:, 1]) == 10
+    @test length(y[1, :]) == 15
+    @test length(y[1:2, :]) == 30
+    @test typeof(x[Source(1), Sink(2)]) == VariableRef
+
+    # Tables
+    @test length(Containers.rowtable(x)) == 50
+    @test length(Containers.rowtable(identity, x, :a)) == 50
+    @test length(Containers.rowtable(x; header = [:x, :y, :z])) == 50
+    @test length(Containers.rowtable(y)) == 150
+    @test length(Containers.rowtable(identity, y, :a)) == 150
+    @test length(Containers.rowtable(y; header = [:x, :y, :z])) == 150
+end
