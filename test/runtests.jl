@@ -102,6 +102,11 @@ end
     @test typeof(SparseArray{Int,3,NTuple{3,String}}()) ==
           SparseArray{Int,3,Tuple{String,String,String}}
     @test length(SparseArray{Int,3,Tuple{String,String,String}}()) == 0
+
+    # indexing
+    indices = eachindex(car_cost)
+    @test length(indices) == 5
+    @test car_cost[first(indices)] == 200
 end
 
 @testset "Repurposed from SparseVarArray" begin
