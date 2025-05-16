@@ -22,10 +22,10 @@ jobs:
           - version: '1'  # The latest point-release (Windows)
             os: windows-latest
             arch: x64
-          - version: '1.7'  # 1.7 for destructuring, not 1.6 LTS (64-bit Linux)
+          - version: 'lts'  # Long term stable version (Linux)
             os: ubuntu-latest
             arch: x64
-          - version: '1.7'  # 1.7 for destructuring, not 1.6 LTS (32-bit Linux)
+          - version: 'lts'  # Long term stable version, x86 (Linux)
             os: ubuntu-latest
             arch: x86
     steps:
