@@ -63,6 +63,8 @@ function Base.show(io::IO, ::MIME"text/plain", sa::AbstractSparseArray)
 end
 Base.show(io::IO, sa::AbstractSparseArray) = show(io, _data(sa))
 
+Base.eachindex(sa::AbstractSparseArray) = keys(_data(sa))
+
 function Base.firstindex(sa::AbstractSparseArray, d)
     return minimum(x -> x[d], _data(sa).indices)
 end
@@ -89,7 +91,7 @@ end
 """
     SparseArray{T,N, K <: NTuple{N,Any} }
 Implementation of an AbstractSparseArray where data is stored
-in a dictionary. 
+in a dictionary.
 """
 struct SparseArray{T,N,K<:NTuple{N,Any}} <: AbstractSparseArray{T,N}
     data::Dictionary{K,T}
