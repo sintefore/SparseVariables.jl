@@ -1,6 +1,10 @@
 TimeStructures release notes
 ===================================
 
+Version 0.7.4 (2025-05-16)
+--------------------------
+* Add support for `eachindex`
+
 Version 0.7.3 (2024-06-04)
 --------------------------
 * Allow Dictionaries v0.4
