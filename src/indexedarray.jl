@@ -112,7 +112,7 @@ const _CACHE_CUTOFF = Ref{Int}(100)
     set_cache_cutoff!(n::Int)
 
 Set the minimum number of entries in an `IndexedVarArray` at which
-`filter_view` / `filter_view_alt` switch from a linear scan to the pre-built
+selection switches from a linear scan to the pre-built
 index cache.  Smaller values favour caching; larger values favour the linear
 scan for small arrays.  Default: `100`.
 """
@@ -224,58 +224,6 @@ function Base.lastindex(sa::IndexedVarArray, d)
     return last(sort(sa.index_names[d]))
 end
 
-# ------------------------------------------------------------------------------
-# IndexedVarArrayView
-# ------------------------------------------------------------------------------
-
-"""
-    IndexedVarArrayView{V,N,T,MT,FT}
-
-A lazy, filtered view into an `IndexedVarArray` where some dimensions are fixed
-to specific values and the rest are free (marked with `Colon`). Iterates as an
-`AbstractDict` mapping projected keys (`FT`, covering only free dimensions) to
-`V` (variable refs). Backed by the parent's `index_cache`, so iteration is O(1)
-once the cache is warm.
-
-Create via `filter_view(iva, mask...)`.
-"""
-struct IndexedVarArrayView{V<:AbstractVariableRef,N,T,MT<:Tuple,FT<:Tuple} <:
-       AbstractDict{FT,V}
-    parent::IndexedVarArray{V,N,T}
-    mask::MT
-end
-
-"""
-    filter_view(iva::IndexedVarArray, mask...)
-
-Return a lazy `IndexedVarArrayView` over entries of `iva` matching `mask`.
-Use `:` for free (wildcard) dimensions and exact values for fixed dimensions.
-The keys of the view are projected tuples covering only the free dimensions.
-
-Unlike `Base.view`, the result is an `AbstractDict{FT, V}` (not an
-`AbstractArray`) where `FT` is a tuple of the free-dimension value types.
-
-# Example
-```julia
-v = filter_view(flow, :, c, p, t)    # one free dim: factory
-for ((f,), var) in v; ...; end        # projected key is a 1-tuple
-sum(values(v))                        # sum of matching VariableRefs
-```
-"""
-function filter_view(iva::IndexedVarArray{V,N,T}, mask...) where {V,N,T}
-    return _make_view(iva, tuple(mask...))
-end
-
-@generated function _make_view(
-    iva::IndexedVarArray{V,N,T},
-    mask::MT,
-) where {V,N,T,MT<:Tuple}
-    fieldcount(MT) != N && return :(throw(BoundsError(iva, mask)))
-    free = [fieldtypes(T)[i] for i in 1:N if fieldtypes(MT)[i] === Colon]
-    FT = Tuple{free...}
-    return :(IndexedVarArrayView{$V,$N,$T,$MT,$FT}(iva, mask))
-end
-
 # Project a full key T down to the free dimensions FT.
 @generated function _project_key(key::T, ::Type{MT}) where {T,MT}
     free_idx = [i for i in 1:fieldcount(T) if fieldtypes(MT)[i] === Colon]
@@ -298,105 +246,45 @@ end
     return :($(Expr(:tuple, parts...))::$T)
 end
 
-# Returns the matching full keys from the parent's cache.
-function _view_matching_keys(v::IndexedVarArrayView{V,N,T})::Vector{T} where {V,N,T}
-    return _select_cached(v.parent, v.mask)
-end
-
-function Base.iterate(v::IndexedVarArrayView{V,N,T,MT,FT}) where {V,N,T,MT,FT}
-    matching = _view_matching_keys(v)
-    isempty(matching) && return nothing
-    key = matching[1]
-    return (_project_key(key, MT) => v.parent[key], (matching, 2))
-end
-
-function Base.iterate(
-    v::IndexedVarArrayView{V,N,T,MT,FT},
-    state::Tuple{Vector{T},Int},
-) where {V,N,T,MT,FT}
-    matching, pos = state
-    pos > length(matching) && return nothing
-    key = matching[pos]
-    return (_project_key(key, MT) => v.parent[key], (matching, pos + 1))
-end
-
-function Base.getindex(
-    v::IndexedVarArrayView{V,N,T,MT,FT},
-    free_key::FT,
-) where {V,N,T,MT,FT}
-    return v.parent[_reconstruct_key(v.mask, free_key, T)]
-end
-
-function Base.haskey(
-    v::IndexedVarArrayView{V,N,T,MT,FT},
-    free_key::FT,
-) where {V,N,T,MT,FT}
-    return haskey(_data(v.parent), _reconstruct_key(v.mask, free_key, T))
-end
-
-Base.length(v::IndexedVarArrayView) = length(_view_matching_keys(v))
-
-Base.keys(v::IndexedVarArrayView{V,N,T,MT,FT}) where {V,N,T,MT,FT} =
-    [_project_key(k, MT) for k in _view_matching_keys(v)]
-
-Base.values(v::IndexedVarArrayView) = [v.parent[k] for k in _view_matching_keys(v)]
-
 """
-    sum(v::IndexedVarArrayView)
-
-Sum the variable refs in the view. Returns `zero(V)` for an empty view,
-preserving the same behaviour as `sum(iva[mask...])` before views were introduced.
-"""
-function Base.sum(v::IndexedVarArrayView{V}) where {V}
-    result = zero(AffExpr)
-    for k in _view_matching_keys(v)
-        JuMP.add_to_expression!(result, v.parent[k])
-    end
-    return result
-end
-
-"""
-    IndexedVarArrayViewAlt{V,N,T,NF,MT,FT}
+    IndexedVarArraySlice{V,N,T,NF,MT,FT}
 
 A lazy, filtered view into an `IndexedVarArray` implementing the
 `AbstractSparseArray{V,NF}` interface, where `NF` is the number of free
 (Colon) dimensions. Keys are projected tuples covering only the free dimensions.
+Iterates values only; use `pairs(v)` or `eachindex(v)` for projected keys alongside values.
 
-Unlike `IndexedVarArrayView`, iteration yields **values only** (not key-value
-pairs), matching standard `AbstractArray` semantics. Use `pairs(v)` or
-`eachindex(v)` to access projected keys alongside values.
-
-Create via `filter_view_alt(iva, mask...)`.
+Create via `slice(iva, mask...)`.
 """
-struct IndexedVarArrayViewAlt{V<:AbstractVariableRef,N,T,NF,MT<:Tuple,FT<:Tuple} <:
+struct IndexedVarArraySlice{V<:AbstractVariableRef,N,T,NF,MT<:Tuple,FT<:Tuple} <:
        AbstractSparseArray{V,NF}
     parent::IndexedVarArray{V,N,T}
     mask::MT
 end
 
 """
-    filter_view_alt(iva::IndexedVarArray, mask...)
+    slice(iva::IndexedVarArray, mask...)
 
-Return a lazy `IndexedVarArrayViewAlt` over entries of `iva` matching `mask`.
+Return a lazy `IndexedVarArraySlice` over entries of `iva` matching `mask`.
 Use `:` for free (wildcard) dimensions and exact values for fixed dimensions.
 
-Unlike `filter_view`, the result is an `AbstractSparseArray{V,NF}` where `NF`
-is the number of free dimensions. Iterates values only; use `pairs(v)` for
-projected-key/value pairs, or `eachindex(v)` for projected keys.
+The result is an `AbstractSparseArray{V,NF}` where `NF` is the number of free
+dimensions. Iterates values only; use `pairs(v)` for projected-key/value pairs,
+or `eachindex(v)` for projected keys.
 
 # Example
 ```julia
-v = filter_view_alt(flow, :, c, p, t)    # NF=1, one free dimension
+v = slice(flow, :, c, p, t)              # NF=1, one free dimension
 sum(v)                                    # sum of matching VariableRefs
 for (k, var) in pairs(v); ...; end        # k is a 1-tuple projected key
 var = v[f, c]                             # splatted index lookup
 ```
 """
-function filter_view_alt(iva::IndexedVarArray{V,N,T}, mask...) where {V,N,T}
-    return _make_view_alt(iva, tuple(mask...))
+function slice(iva::IndexedVarArray{V,N,T}, mask...) where {V,N,T}
+    return _make_slice(iva, tuple(mask...))
 end
 
-@generated function _make_view_alt(
+@generated function _make_slice(
     iva::IndexedVarArray{V,N,T},
     mask::MT,
 ) where {V,N,T,MT<:Tuple}
@@ -404,27 +292,27 @@ end
     free = [fieldtypes(T)[i] for i in 1:N if fieldtypes(MT)[i] === Colon]
     NF = length(free)
     FT = Tuple{free...}
-    return :(IndexedVarArrayViewAlt{$V,$N,$T,$NF,$MT,$FT}(iva, mask))
+    return :(IndexedVarArraySlice{$V,$N,$T,$NF,$MT,$FT}(iva, mask))
 end
 
-function _view_matching_keys(v::IndexedVarArrayViewAlt{V,N,T})::Vector{T} where {V,N,T}
+function _view_matching_keys(v::IndexedVarArraySlice{V,N,T})::Vector{T} where {V,N,T}
     return _select_cached(v.parent, v.mask)
 end
 
 # Iterator traits: length is known but size() is not meaningful
-Base.IteratorSize(::Type{<:IndexedVarArrayViewAlt}) = Base.HasLength()
-Base.IteratorEltype(::Type{<:IndexedVarArrayViewAlt}) = Base.HasEltype()
-Base.eltype(::Type{<:IndexedVarArrayViewAlt{V}}) where {V} = V
+Base.IteratorSize(::Type{<:IndexedVarArraySlice}) = Base.HasLength()
+Base.IteratorEltype(::Type{<:IndexedVarArraySlice}) = Base.HasEltype()
+Base.eltype(::Type{<:IndexedVarArraySlice{V}}) where {V} = V
 
 # Iteration: values only (AbstractArray semantics)
-function Base.iterate(v::IndexedVarArrayViewAlt{V,N,T,NF,MT,FT}) where {V,N,T,NF,MT,FT}
+function Base.iterate(v::IndexedVarArraySlice{V,N,T,NF,MT,FT}) where {V,N,T,NF,MT,FT}
     matching = _view_matching_keys(v)
     isempty(matching) && return nothing
     return (v.parent[matching[1]], (matching, 2))
 end
 
 function Base.iterate(
-    v::IndexedVarArrayViewAlt{V,N,T,NF,MT,FT},
+    v::IndexedVarArraySlice{V,N,T,NF,MT,FT},
     state::Tuple{Vector{T},Int},
 ) where {V,N,T,NF,MT,FT}
     matching, pos = state
@@ -434,17 +322,28 @@ end
 
 # getindex by FT tuple: v[(f, c)]
 function Base.getindex(
-    v::IndexedVarArrayViewAlt{V,N,T,NF,MT,FT},
+    v::IndexedVarArraySlice{V,N,T,NF,MT,FT},
     free_key::FT,
 ) where {V,N,T,NF,MT,FT}
     return v.parent[_reconstruct_key(v.mask, free_key, T)]
+end
+
+# Disambiguate: AbstractSparseArray defines getindex(sa, ::NTuple{N,Any}) where N=NF,
+# which overlaps with the FT method above when FT <: NTuple{NF,Any}.
+# This more-specific overload resolves the ambiguity for broadcasting and other
+# callers that hold the key as an unparameterised NTuple.
+function Base.getindex(
+    v::IndexedVarArraySlice{V,N,T,NF,MT,FT},
+    idx::NTuple{NF,Any},
+) where {V,N,T,NF,MT,FT}
+    return v.parent[_reconstruct_key(v.mask, idx, T)]
 end
 
 # getindex by splatted args: v[f, c] or v[f] (NF==1)
 # Generated at compile time — reconstructs the full key by interleaving
 # the fixed mask values and the free positional arguments.
 @generated function Base.getindex(
-    v::IndexedVarArrayViewAlt{V,N,T,NF,MT,FT},
+    v::IndexedVarArraySlice{V,N,T,NF,MT,FT},
     idx...,
 ) where {V,N,T,NF,MT,FT}
     if length(idx) != NF
@@ -464,47 +363,47 @@ end
 end
 
 # Block mutation — views are read-only
-Base.setindex!(::IndexedVarArrayViewAlt, _, _...) =
-    error("IndexedVarArrayViewAlt is read-only")
+Base.setindex!(::IndexedVarArraySlice, _, _...) =
+    error("IndexedVarArraySlice is read-only")
 
 # size is not meaningful for sparse tuple-keyed arrays
-function Base.size(::IndexedVarArrayViewAlt)
+function Base.size(::IndexedVarArraySlice)
     return error(
-        "`Base.size` is not implemented for `IndexedVarArrayViewAlt` because it " *
+        "`Base.size` is not implemented for `IndexedVarArraySlice` because it " *
         "is conceptually a sparse dictionary with NF-dimensional keys. " *
         "Use `length` for the number of entries.",
     )
 end
 
 function Base.haskey(
-    v::IndexedVarArrayViewAlt{V,N,T,NF,MT,FT},
+    v::IndexedVarArraySlice{V,N,T,NF,MT,FT},
     free_key::FT,
 ) where {V,N,T,NF,MT,FT}
     return haskey(_data(v.parent), _reconstruct_key(v.mask, free_key, T))
 end
 
-Base.length(v::IndexedVarArrayViewAlt) = length(_view_matching_keys(v))
+Base.length(v::IndexedVarArraySlice) = length(_view_matching_keys(v))
 
-Base.keys(v::IndexedVarArrayViewAlt{V,N,T,NF,MT,FT}) where {V,N,T,NF,MT,FT} =
+Base.keys(v::IndexedVarArraySlice{V,N,T,NF,MT,FT}) where {V,N,T,NF,MT,FT} =
     [_project_key(k, MT) for k in _view_matching_keys(v)]
 
-Base.values(v::IndexedVarArrayViewAlt) = [v.parent[k] for k in _view_matching_keys(v)]
+Base.values(v::IndexedVarArraySlice) = [v.parent[k] for k in _view_matching_keys(v)]
 
 # eachindex returns projected FT tuples (same as keys)
-Base.eachindex(v::IndexedVarArrayViewAlt) = keys(v)
+Base.eachindex(v::IndexedVarArraySlice) = keys(v)
 
-Base.pairs(v::IndexedVarArrayViewAlt{V,N,T,NF,MT,FT}) where {V,N,T,NF,MT,FT} =
+Base.pairs(v::IndexedVarArraySlice{V,N,T,NF,MT,FT}) where {V,N,T,NF,MT,FT} =
     [_project_key(k, MT) => v.parent[k] for k in _view_matching_keys(v)]
 
-function Base.firstindex(v::IndexedVarArrayViewAlt, d)
+function Base.firstindex(v::IndexedVarArraySlice, d)
     return minimum(k[d] for k in _view_matching_keys(v))
 end
-function Base.lastindex(v::IndexedVarArrayViewAlt, d)
+function Base.lastindex(v::IndexedVarArraySlice, d)
     return maximum(k[d] for k in _view_matching_keys(v))
 end
 
 # sum: build AffExpr directly — avoids _data() from AbstractSparseArray default
-function Base.sum(v::IndexedVarArrayViewAlt{V}) where {V}
+function Base.sum(v::IndexedVarArraySlice{V}) where {V}
     result = zero(AffExpr)
     for k in _view_matching_keys(v)
         JuMP.add_to_expression!(result, v.parent[k])
@@ -513,5 +412,159 @@ function Base.sum(v::IndexedVarArrayViewAlt{V}) where {V}
 end
 
 # show: override AbstractSparseArray defaults which call _data()
-Base.show(io::IO, ::MIME"text/plain", v::IndexedVarArrayViewAlt) = summary(io, v)
-Base.show(io::IO, v::IndexedVarArrayViewAlt) = summary(io, v)
+Base.show(io::IO, ::MIME"text/plain", v::IndexedVarArraySlice) = summary(io, v)
+Base.show(io::IO, v::IndexedVarArraySlice) = summary(io, v)
+
+# ------------------------------------------------------------------------------
+# Broadcasting
+# Follows the pattern of JuMP.Containers.SparseAxisArray.
+# The result of any broadcast over these types is always a plain SparseArray.
+# ------------------------------------------------------------------------------
+
+"""
+    IVABroadcastStyle{N,K} <: Broadcast.BroadcastStyle
+
+Shared broadcasting style for `IndexedVarArray` and `IndexedVarArraySlice`.
+`N` is the effective key dimensionality and `K` is the concrete key tuple type.
+All broadcast results are materialised as `SparseArray`.
+"""
+struct IVABroadcastStyle{N,K} <: Broadcast.BroadcastStyle end
+
+Base.BroadcastStyle(::Type{<:IndexedVarArray{V,N,T}}) where {V,N,T} =
+    IVABroadcastStyle{N,T}()
+
+Base.BroadcastStyle(
+    ::Type{<:IndexedVarArraySlice{V,N,T,NF,MT,FT}},
+) where {V,N,T,NF,MT,FT} = IVABroadcastStyle{NF,FT}()
+
+# Disallow mixing with other array types.
+function Base.BroadcastStyle(::IVABroadcastStyle, ::Base.BroadcastStyle)
+    return throw(
+        ArgumentError(
+            "Cannot broadcast IndexedVarArray or a view with another array of a different type",
+        ),
+    )
+end
+
+# Scalar (0-d) broadcasting is allowed.
+function Base.BroadcastStyle(
+    style::IVABroadcastStyle,
+    ::Base.Broadcast.DefaultArrayStyle{0},
+)
+    return style
+end
+
+# Fix ambiguity with Unknown.
+function Base.BroadcastStyle(::IVABroadcastStyle, ::Base.Broadcast.Unknown)
+    return throw(
+        ArgumentError(
+            "Cannot broadcast IndexedVarArray or a view with an unknown broadcast style",
+        ),
+    )
+end
+
+# Bypass the default instantiate which calls axes().
+function Base.Broadcast.instantiate(
+    bc::Base.Broadcast.Broadcasted{<:IVABroadcastStyle},
+)
+    return bc
+end
+
+# ── Internal helpers ──────────────────────────────────────────────────────────
+
+# Apply a broadcast tree to a single key.
+_iva_getindex(x::IndexedVarArray, key) = x[key]
+_iva_getindex(x::IndexedVarArraySlice, key) = x[key]
+_iva_getindex(x::Any, ::Any) = x
+_iva_getindex(x::Ref, ::Any) = x[]
+
+function _iva_getindex(
+    bc::Base.Broadcast.Broadcasted{<:IVABroadcastStyle},
+    key,
+)
+    return bc.f(_iva_get_args(bc.args, key)...)
+end
+
+function _iva_get_args(args::Tuple, key)
+    return (_iva_getindex(first(args), key), _iva_get_args(Base.tail(args), key)...)
+end
+_iva_get_args(::Tuple{}, ::Any) = ()
+
+# Verify x has the same key set as ref_keys.
+function _iva_check_same_keys(ref_keys, x::IndexedVarArray, args...)
+    if length(ref_keys) != length(_data(x)) ||
+       any(k -> !haskey(_data(x), k), ref_keys)
+        throw(ArgumentError("Cannot broadcast IndexedVarArrays with different indices"))
+    end
+    return _iva_check_same_keys(ref_keys, args...)
+end
+
+function _iva_check_same_keys(
+    ref_keys,
+    x::IndexedVarArraySlice,
+    args...,
+)
+    if length(ref_keys) != length(x) || any(k -> !haskey(x, k), ref_keys)
+        throw(
+            ArgumentError("Cannot broadcast IndexedVarArray views with different indices"),
+        )
+    end
+    return _iva_check_same_keys(ref_keys, args...)
+end
+
+_iva_check_same_keys(ref_keys, ::Any, args...) = _iva_check_same_keys(ref_keys, args...)
+_iva_check_same_keys(::Any) = nothing
+
+# Recursively extract the key set from the first IVA-family object found.
+function _iva_indices(bc::Base.Broadcast.Broadcasted{<:IVABroadcastStyle}, rest...)
+    return _iva_indices(bc.args..., rest...)
+end
+
+function _iva_indices(x::IndexedVarArray, rest...)
+    ks = collect(keys(_data(x)))
+    _iva_check_same_keys(ks, rest...)
+    return ks
+end
+
+function _iva_indices(x::IndexedVarArraySlice, rest...)
+    ks = keys(x)   # Vector{FT}
+    _iva_check_same_keys(ks, rest...)
+    return ks
+end
+
+_iva_indices(::Any, rest...) = _iva_indices(rest...)   # skip scalars
+
+# ── Materialise ───────────────────────────────────────────────────────────────
+
+function Base.copy(
+    bc::Base.Broadcast.Broadcasted{IVABroadcastStyle{N,K}},
+) where {N,K}
+    indices = _iva_indices(bc)
+    isempty(indices) && return SparseArray(Dictionary{K,Any}())
+    vals = [_iva_getindex(bc, k) for k in indices]
+    return SparseArray(Dictionary(indices, vals))
+end
+
+# Prevent scalar broadcast from reducing to a 0-d result.
+for _IVAType in (
+    :IndexedVarArray,
+    :IndexedVarArraySlice,
+)
+    @eval begin
+        function Base.Broadcast.broadcast_preserving_zero_d(
+            f,
+            A::$_IVAType,
+            As...,
+        )
+            return broadcast(f, A, As...)
+        end
+        function Base.Broadcast.broadcast_preserving_zero_d(
+            f,
+            x,
+            A::$_IVAType,
+            As...,
+        )
+            return broadcast(f, x, A, As...)
+        end
+    end
+end
