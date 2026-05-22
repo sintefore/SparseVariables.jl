@@ -115,3 +115,21 @@ function SparseArray{T,N,K}() where {T,N,K<:NTuple{N,Any}}
 end
 
 _data(sa::SparseArray) = sa.data
+
+# ------------------------------------------------------------------------------
+# _keytype interface
+# Each concrete AbstractSparseArray subtype must implement _keytype(::Type{<:SA}).
+# ------------------------------------------------------------------------------
+
+"""
+    _keytype(sa)  /  _keytype(::Type{<:AbstractSparseArray})
+
+Return the key tuple type used by the sparse array. Required by `slice` and
+broadcasting. Implement `_keytype(::Type{MySA})` for every concrete subtype.
+"""
+_keytype(::Type{<:AbstractSparseArray}) =
+    error("_keytype not implemented for this AbstractSparseArray subtype")
+_keytype(sa::AbstractSparseArray) = _keytype(typeof(sa))
+_keytype(::Type{<:SparseArray{T,N,K}}) where {T,N,K} = K
+
+Base.haskey(sa::AbstractSparseArray, k) = haskey(_data(sa), k)

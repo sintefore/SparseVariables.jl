@@ -6,13 +6,15 @@ using LinearAlgebra
 using PrecompileTools
 
 include("sparsearray.jl")
+include("slice.jl")
+include("broadcast.jl")
 include("dictionaries.jl")
 include("indexedarray.jl")
 include("tables.jl")
 
 export SparseArray
 export IndexedVarArray
-export IndexedVarArraySlice
+export SparseArraySlice
 export slice
 export insertvar!
 export unsafe_insertvar!
