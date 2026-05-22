@@ -103,9 +103,23 @@ function build_cache!(cache, pat, sa::IndexedVarArray{V,N,T}) where {V,N,T}
     return cache
 end
 
+# Minimum number of entries before the index cache is used; below this a
+# linear scan is cheaper. Tune with set_cache_cutoff! or calibrate with
+# benchmark/cutoff_benchmark.jl.
+const _CACHE_CUTOFF = Ref{Int}(100)
+
+"""
+    set_cache_cutoff!(n::Int)
+
+Set the minimum number of entries in an `IndexedVarArray` at which
+`filter_view` / `filter_view_alt` switch from a linear scan to the pre-built
+index cache.  Smaller values favour caching; larger values favour the linear
+scan for small arrays.  Default: `100`.
+"""
+set_cache_cutoff!(n::Int) = (_CACHE_CUTOFF[] = n; nothing)
+
 function _select_cached(sa::IndexedVarArray{V,N,T}, pat)::Vector{T} where {V,N,T}
-    # TODO: Benchmark to find good cutoff-value for caching
-    length(_data(sa)) < 100 && return collect(T, _select_gen(keys(_data(sa)), pat))
+    length(_data(sa)) < _CACHE_CUTOFF[] && return collect(T, _select_gen(keys(_data(sa)), pat))
     cache = _getcache(sa, pat)::Dictionary{_decode_nonslices(sa, pat),Vector{T}}
     build_cache!(cache, pat, sa)
     vals = _dropslices_gen(pat)

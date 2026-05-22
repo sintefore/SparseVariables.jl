@@ -19,6 +19,7 @@ export filter_view_alt
 export insertvar!
 export unsafe_insertvar!
 export SafeInsert, UnsafeInsert
+export set_cache_cutoff!
 
 @setup_workload begin
     # Putting some things in `setup` can reduce the size of the
