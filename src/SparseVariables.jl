@@ -12,6 +12,10 @@ include("tables.jl")
 
 export SparseArray
 export IndexedVarArray
+export IndexedVarArrayView
+export filter_view
+export IndexedVarArrayViewAlt
+export filter_view_alt
 export insertvar!
 export unsafe_insertvar!
 export SafeInsert, UnsafeInsert
