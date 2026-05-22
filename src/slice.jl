@@ -1,22 +1,14 @@
-# Match key against mask at compile time; Colon positions are free (skipped).
-@generated function _matches_mask(key::T, mask::MT) where {T,MT}
-    checks = Expr[]
-    for i in 1:fieldcount(T)
-        if fieldtypes(MT)[i] !== Colon
-            push!(checks, :(key[$i] != mask[$i] && return false))
-        end
-    end
-    return quote
-        $(checks...)
-        return true
-    end
+# Project tpl to the non-Colon (fixed) positions of MT.
+@generated function _project_fixed(tpl::T, ::Type{MT}) where {T,MT}
+    inds = [i for i in 1:fieldcount(T) if fieldtypes(MT)[i] !== Colon]
+    return :($(Expr(:tuple, [:(tpl[$i]) for i in inds]...)))
 end
 
-# Project a full key T down to the free dimensions FT.
-@generated function _project_key(key::T, ::Type{MT}) where {T,MT}
-    free_idx = [i for i in 1:fieldcount(T) if fieldtypes(MT)[i] === Colon]
-    FT = Tuple{[fieldtypes(T)[i] for i in free_idx]...}
-    return :($(Expr(:tuple, [:(key[$i]) for i in free_idx]...))::$FT)
+# Project tpl to the Colon (free) positions of MT.
+@generated function _project_free(tpl::T, ::Type{MT}) where {T,MT}
+    inds = [i for i in 1:fieldcount(T) if fieldtypes(MT)[i] === Colon]
+    FT = Tuple{[fieldtypes(T)[i] for i in inds]...}
+    return :($(Expr(:tuple, [:(tpl[$i]) for i in inds]...))::$FT)
 end
 
 # Reconstruct a full key T from the fixed values in mask and the free key FT.
@@ -92,7 +84,7 @@ end
 function _view_matching_keys(
     v::SparseArraySlice{P,V,N,T,NF,MT,FT},
 )::Vector{T} where {P,V,N,T,NF,MT,FT}
-    return [k for k in keys(_data(v.parent)) if _matches_mask(k, v.mask)]
+    return collect(T, _select_gen(keys(_data(v.parent)), v.mask))
 end
 
 # Iterator traits
@@ -172,14 +164,14 @@ end
 Base.length(v::SparseArraySlice) = length(_view_matching_keys(v))
 
 Base.keys(v::SparseArraySlice{P,V,N,T,NF,MT,FT}) where {P,V,N,T,NF,MT,FT} =
-    [_project_key(k, MT) for k in _view_matching_keys(v)]
+    [_project_free(k, MT) for k in _view_matching_keys(v)]
 
 Base.values(v::SparseArraySlice) = [v.parent[k] for k in _view_matching_keys(v)]
 
 Base.eachindex(v::SparseArraySlice) = keys(v)
 
 Base.pairs(v::SparseArraySlice{P,V,N,T,NF,MT,FT}) where {P,V,N,T,NF,MT,FT} =
-    [_project_key(k, MT) => v.parent[k] for k in _view_matching_keys(v)]
+    [_project_free(k, MT) => v.parent[k] for k in _view_matching_keys(v)]
 
 function Base.firstindex(v::SparseArraySlice, d)
     return minimum(k[d] for k in _view_matching_keys(v))

@@ -73,30 +73,10 @@ function unsafe_insertvar!(var::IndexedVarArray{V,N,T}, index...) where {V,N,T}
     return insertvar!(var, UnsafeInsert(), index...)
 end
 
-joinex(ex1, ex2) = :($ex1..., $ex2...)
-@generated function _active(idx::I, pat::P) where {I,P}
-    ids = fieldtypes(I)
-    ps = fieldtypes(P)
-    exs = []
-    for i in 1:length(ids)
-        if ps[i] != Colon
-            if i > 2
-                push!(exs, :(a1 = idx[$i],))
-            else
-                push!(exs, :(idx[$i],))
-            end
-        end
-    end
-    for i in 1:length(exs)-1
-        exs[i+1] = joinex(exs[i], exs[i+1])
-    end
-    return :(tuple($(exs[end])...))
-end
-
 function build_cache!(cache, pat, sa::IndexedVarArray{V,N,T}) where {V,N,T}
     if isempty(cache)
         for v in keys(sa)
-            vred = _active(v, pat)
+            vred = _project_fixed(v, typeof(pat))
             nv = get!(cache, vred, T[])
             push!(nv, v)
         end
@@ -105,9 +85,9 @@ function build_cache!(cache, pat, sa::IndexedVarArray{V,N,T}) where {V,N,T}
 end
 
 # Minimum number of entries before the index cache is used; below this a
-# linear scan is cheaper. Tune with set_cache_cutoff! or calibrate with
+# linear scan is assumed cheaper. Tune with set_cache_cutoff! or calibrate with
 # benchmark/cutoff_benchmark.jl.
-const _CACHE_CUTOFF = Ref{Int}(100)
+_CACHE_CUTOFF::Int = 100
 
 """
     set_cache_cutoff!(n::Int)
@@ -117,13 +97,13 @@ selection switches from a linear scan to the pre-built
 index cache.  Smaller values favour caching; larger values favour the linear
 scan for small arrays.  Default: `100`.
 """
-set_cache_cutoff!(n::Int) = (_CACHE_CUTOFF[] = n; nothing)
+set_cache_cutoff!(n::Int) = (global _CACHE_CUTOFF = n; nothing)
 
 function _select_cached(sa::IndexedVarArray{V,N,T}, pat)::Vector{T} where {V,N,T}
-    length(_data(sa)) < _CACHE_CUTOFF[] && return collect(T, _select_gen(keys(_data(sa)), pat))
+    length(_data(sa)) < _CACHE_CUTOFF && return collect(T, _select_gen(keys(_data(sa)), pat))
     cache = _getcache(sa, pat)::Dictionary{_decode_nonslices(sa, pat),Vector{T}}
     build_cache!(cache, pat, sa)
-    vals = _dropslices_gen(pat)
+    vals = _project_fixed(pat, typeof(pat))
     return get!(cache, vals, T[])
 end
 
@@ -132,28 +112,6 @@ bin2int(v) = bin2int(v, Dim{length(v)}())
 @generated function bin2int(v, ::Dim{N}) where {N}
     w = reverse([2^(i - 1) for i in 1:N])
     return :(dot($w, v))
-end
-
-function _dropslices(t::P) where {P}
-    return Tuple(ti for ti in t if ti != Colon())
-end
-
-@generated function _dropslices_gen(pat::P) where {P}
-    ps = fieldtypes(P)
-    exs = []
-    for i in 1:length(ps)
-        if ps[i] != Colon
-            if i > 2 # Workaround for slurping of iterables (like strings) when passing to joinex
-                push!(exs, :(a2 = pat[$i],))
-            else
-                push!(exs, :(pat[$i],))
-            end
-        end
-    end
-    for i in 1:length(exs)-1
-        exs[i+1] = joinex(exs[i], exs[i+1])
-    end
-    return exs[end]
 end
 """
     _get_cache_index(::P)
