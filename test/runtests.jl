@@ -1,4 +1,4 @@
-using Base: product
+﻿using Base: product
 using Dictionaries
 using HiGHS
 using JuMP
@@ -328,4 +328,213 @@ end
     @test length(x) == 2
     @test sum(x) == sum(x[:, :])
     @test typeof(sum(x)) <: GenericAffExpr{Float64,MockVariableRef}
+end
+
+const _test_sa = testdata_sa()
+
+@testset "SparseArraySlice on SparseArray" begin
+    sa = _test_sa
+
+    # _keytype
+    @test SV._keytype(sa) == Tuple{String,Int}
+
+    # Types
+    v = slice(sa, "ford", :)
+    @test v isa SparseArraySlice
+    @test v isa SV.AbstractSparseArray
+    @test SV._keytype(v) == Tuple{Int}       # projected key type
+    @test eltype(v) == Int
+
+    # length
+    @test length(slice(sa, "ford", :)) == 2
+    @test length(slice(sa, :, 2001))   == 2
+    @test length(slice(sa, :, :))      == 5
+    @test length(slice(sa, "xxx", :))  == 0
+
+    # keys / values / eachindex / pairs
+    ks = sort(keys(v))
+    @test ks == [(2000,), (2001,)]
+    @test eachindex(v) == keys(v)
+    @test sort(values(v)) == [100, 150]
+    ps = Dict(pairs(v))
+    @test ps[(2000,)] == 100
+    @test ps[(2001,)] == 150
+
+    # getindex
+    @test v[(2000,)]              == 100    # FT-tuple
+    @test v[NTuple{1,Any}((2001,))] == 150  # NTuple{NF,Any}
+    @test v[2000]                 == 100    # splatted (NF==1)
+    @test v[2001]                 == 150
+
+    v2 = slice(sa, :, :)                   # NF==2
+    @test v2["ford", 2000]        == 100
+    @test v2["bmw", 2002]         == 300
+
+    # haskey
+    @test  haskey(v, (2000,))
+    @test !haskey(v, (1999,))
+
+    # sum
+    @test sum(v) == 250
+    @test sum(slice(sa, :, 2001)) == 350
+    @test sum(slice(sa, "xxx", :)) == 0
+
+    # firstindex / lastindex (d = parent-dimension index)
+    @test SV.firstindex(v, 2) == 2000
+    @test SV.lastindex(v, 2)  == 2001
+
+    # iteration (values only)
+    @test sum(val for val in v) == 250
+    @test Base.IteratorSize(typeof(v)) == Base.HasLength()
+    @test Base.IteratorEltype(typeof(v)) == Base.HasEltype()
+
+    # show / summary
+    @test occursin("SparseArraySlice", sprint(summary, v))
+
+    # read-only
+    @test_throws MethodError (v[(2000,)] = 999)
+    @test_throws ErrorException size(v)
+
+    # wrong mask length
+    @test_throws BoundsError slice(sa, "ford", :, :)
+
+    # empty slice
+    ve = slice(sa, "xxx", :)
+    @test length(ve) == 0
+    @test isempty(keys(ve))
+    @test isempty(values(ve))
+    @test sum(ve) == 0
+end
+
+@testset "SparseArraySlice on IndexedVarArray" begin
+    (; cars, year, car_cost) = testdata1(false)
+    m = Model()
+    @variable(m, x[c = cars, y = year]; container = IndexedVarArray)
+    for k in keys(car_cost)
+        insertvar!(x, k...)
+    end
+
+    v = slice(x, "ford", :)
+
+    # type and _keytype
+    @test v isa SparseArraySlice
+    @test SV._keytype(x) == Tuple{String,Int}
+    @test SV._keytype(v) == Tuple{Int}
+
+    # length / keys
+    @test length(v) == 2
+    @test sort(keys(v)) == [(2000,), (2001,)]
+
+    # JuMP sum returns AffExpr
+    @test sum(v) isa AffExpr
+    @test length(sum(v).terms) == 2
+
+    @test sum(slice(x, :, 2001)) isa AffExpr
+    @test length(sum(slice(x, :, 2001)).terms) == 2
+
+    # empty JuMP slice sum returns zero(AffExpr)
+    @test sum(slice(x, "xxx", :)) == zero(AffExpr)
+end
+
+@testset "Broadcasting SparseArray" begin
+    sa = _test_sa
+
+    # scalar broadcast
+    r = sa .* 2
+    @test r isa SparseArray
+    @test length(r) == 5
+    @test r["ford", 2000] == 200
+    @test r["lotus", 1957] == 1000
+
+    r2 = 2 .* sa
+    @test r2["bmw", 2001] == 400
+
+    r3 = sa .+ 10
+    @test r3["ford", 2001] == 160
+
+    # element-wise binary
+    r4 = sa .+ sa
+    @test r4["ford", 2000] == 200
+    @test r4["bmw", 2002]  == 600
+
+    # function broadcast
+    r5 = sqrt.(sa .* 1.0)
+    @test r5 isa SparseArray
+    @test r5["ford", 2000] ≈ sqrt(100.0)
+
+    # result type
+    @test Base.BroadcastStyle(typeof(sa)) isa SV.SparseBroadcastStyle
+
+    # key mismatch error
+    sa2 = SparseArray(Dict(("a", 1) => 1))
+    @test_throws ArgumentError sa .+ sa2
+
+    # empty array broadcast
+    empty_sa = SparseArray(Dictionary{Tuple{String,Int},Int}())
+    r_empty = empty_sa .* 2
+    @test r_empty isa SparseArray
+    @test length(r_empty) == 0
+end
+
+@testset "Broadcasting SparseArraySlice" begin
+    sa = _test_sa
+
+    v = slice(sa, "ford", :)
+    r = v .* 2
+    @test r isa SparseArray
+    @test length(r) == 2
+    @test r[(2000,)] == 200
+    @test r[(2001,)] == 300
+
+    # slice .+ slice (same keys)
+    r2 = v .+ v
+    @test r2[(2000,)] == 200
+
+    # NF=2 slice broadcast
+    v2 = slice(sa, :, :)
+    r3 = v2 .* 3
+    @test r3["ford", 2000] == 300
+    @test r3["lotus", 1957] == 1500
+
+    # key mismatch between two slices
+    vbmw = slice(sa, "bmw", :)
+    @test_throws ArgumentError v .+ vbmw
+end
+
+@testset "Broadcasting IndexedVarArray" begin
+    (; cars, year, car_cost) = testdata1(false)
+    m = Model()
+    @variable(m, x[c = cars, y = year] >= 0; container = IndexedVarArray)
+    for k in keys(car_cost)
+        insertvar!(x, k...)
+    end
+    @objective(m, Min, sum(x[c, y] for (c, y) in keys(car_cost)))
+    @constraint(m, sum(x[:, :]) == 1)
+    set_optimizer(m, HiGHS.Optimizer)
+    set_optimizer_attribute(m, MOI.Silent(), true)
+    optimize!(m)
+
+    # value.(iva) → SparseArray
+    vals = value.(x)
+    @test vals isa SparseArray
+    @test length(vals) == length(x)
+    @test isapprox(sum(values(vals)), 1.0; atol = 1e-6)
+
+    # value.(slice) → SparseArray with projected keys
+    vslice = value.(slice(x, "ford", :))
+    @test vslice isa SparseArray
+    @test length(vslice) == 2
+    @test eltype(vslice) == Float64
+
+    # iva .+ iva → SparseArray{AffExpr}
+    aff = x .+ x
+    @test aff isa SparseArray
+    @test length(aff) == length(x)
+    @test first(values(aff)) isa AffExpr
+
+    # key mismatch error
+    m2 = Model()
+    @variable(m2, y[c = ["lotus"], yr = [1957]]; container = IndexedVarArray)
+    insertvar!(y, "lotus", 1957)
+    @test_throws ArgumentError x .+ y
 end
