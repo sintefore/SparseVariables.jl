@@ -6,7 +6,7 @@ using InteractiveUtils
 
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
-    quote
+    return quote
         local iv = try
             Base.loaded_modules[Base.PkgId(
                 Base.UUID("6e696c72-6542-2067-7265-42206c756150"),
