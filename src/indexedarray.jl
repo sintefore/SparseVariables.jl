@@ -60,6 +60,7 @@ function insertvar!(
     ::UnsafeInsert,
     index...,
 ) where {V,N,T}
+    clear_cache!(var)
     return var[index] = var.f(index...)
 end
 
