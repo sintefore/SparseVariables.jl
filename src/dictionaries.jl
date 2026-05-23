@@ -1,7 +1,7 @@
 """
     make_filter_fun(c, pos)
 
-Return function to use for filtering depending on the type and value of `c` 
+Return function to use for filtering depending on the type and value of `c`
 to apply at position `pos`
 """
 make_filter_fun(c, pos) = x -> x[pos] == c
@@ -38,7 +38,7 @@ function indices_fun(some_tuple)
 end
 
 """
-    _select_rowwise(a, pattern) 
+    _select_rowwise(a, pattern)
 
 Filter iterable data a by tuple `pattern` by row (slow)
 """
@@ -47,7 +47,7 @@ function _select_rowwise(a, pattern)
 end
 
 """
-    _select_colwise(a, pattern) 
+    _select_colwise(a, pattern)
 
 Filter iterable data a by tuple `pattern` by column (recursively)
 """
@@ -59,7 +59,7 @@ end
     _select_gen(a, pattern)
 
 Filter iterable data `a` by tuple `pattern` by row, using generated function for speed.
-See more straight-forward implementations `_select_rowwise` and `_select_colwise` for reference.   
+See more straight-forward implementations `_select_rowwise` and `_select_colwise` for reference.
 """
 function _select_gen(a, pattern)
     return filter(x -> _select_generated(pattern, x), a)
@@ -68,7 +68,7 @@ end
 """
     _select_gen_perm(a, pattern, perm)
 Filter iterable `data` byt tuple `pattern` by row using generated function that permutes the sequence of
-evaluation by the permutation tuple `perm` for improved control as this can give performance advantages, 
+evaluation by the permutation tuple `perm` for improved control as this can give performance advantages,
 depending on the uniqueness of the search pattern and cost of function evaluation.
 
 ## Example
@@ -226,33 +226,23 @@ Works on types because it is used in generated function
 """
 isfixed(t) = true
 isfixed(::Type{T} where {T<:Function}) = false
-isfixed(::Type{T} where {T<:UnitRange}) = false
-iscolon(t) = false
-iscolon(::Type{T} where {T<:Colon}) = true
+isfixed(::Type{T} where {T<:AbstractRange}) = false
 
 @generated function _getindex(
     sa::AbstractSparseArray{T,N},
     tpl::Tuple,
 ) where {T,N}
     lookup = true
-    slice = true
     for t in fieldtypes(tpl)
         if !isfixed(t)
             lookup = false
-            if !iscolon(t)
-                slice = false
-            end
         end
     end
 
     if lookup
         return :(get(_data(sa), tpl, zero(T)))
-    elseif !slice
-        return :(retval = select(_data(sa), tpl);
-        length(retval) > 0 ? retval : zero(T))
-    else    # Return selection or zero if empty to avoid reduction of empty iterate
-        return :(retval = _select_var(sa, tpl);
-        length(retval) > 0 ? retval : zero(T))
+    else
+        return :(_make_slice(sa, tpl))
     end
 end
 

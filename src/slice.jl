@@ -1,22 +1,29 @@
-# Project tpl to the non-Colon (fixed) positions of MT.
+# Generated functions in this file cannot rely on helpers defined later in the
+# include order, so selector classification stays local.
+_is_exact_selector_type(::Type) = true
+_is_exact_selector_type(::Type{<:Function}) = false
+_is_exact_selector_type(::Type{<:AbstractRange}) = false
+_is_exact_selector_type(::Type{<:Colon}) = false
+
+# Project tpl to the exact-match positions of MT.
 @generated function _project_fixed(tpl::T, ::Type{MT}) where {T,MT}
-    inds = [i for i in 1:fieldcount(T) if fieldtypes(MT)[i] !== Colon]
+    inds = [i for i in 1:fieldcount(T) if _is_exact_selector_type(fieldtypes(MT)[i])]
     return :($(Expr(:tuple, [:(tpl[$i]) for i in inds]...)))
 end
 
-# Project tpl to the Colon (free) positions of MT.
+# Project tpl to the non-exact (free) positions of MT.
 @generated function _project_free(tpl::T, ::Type{MT}) where {T,MT}
-    inds = [i for i in 1:fieldcount(T) if fieldtypes(MT)[i] === Colon]
+    inds = [i for i in 1:fieldcount(T) if !_is_exact_selector_type(fieldtypes(MT)[i])]
     FT = Tuple{[fieldtypes(T)[i] for i in inds]...}
     return :($(Expr(:tuple, [:(tpl[$i]) for i in inds]...))::$FT)
 end
 
-# Reconstruct a full key T from the fixed values in mask and the free key FT.
+# Reconstruct a full key T from the exact values in mask and the free key FT.
 @generated function _reconstruct_key(mask::MT, free_key::FT, ::Type{T}) where {MT,FT,T}
     parts = Vector{Expr}(undef, fieldcount(T))
     fi = 1
     for i in 1:fieldcount(T)
-        if fieldtypes(MT)[i] === Colon
+        if !_is_exact_selector_type(fieldtypes(MT)[i])
             parts[i] = :(free_key[$fi])
             fi += 1
         else
@@ -50,13 +57,29 @@ struct SparseArraySlice{
 end
 
 _keytype(::Type{<:SparseArraySlice{P,V,N,T,NF,MT,FT}}) where {P,V,N,T,NF,MT,FT} = FT
+_parent_keytype(::Type{<:SparseArraySlice{P,V,N,T,NF,MT,FT}}) where {P,V,N,T,NF,MT,FT} = FT
+
+@generated function _parent_keytype(::Type{P}) where {P<:AbstractSparseArray}
+    :data in fieldnames(P) ||
+        error("cannot infer key type for this AbstractSparseArray subtype")
+    D = fieldtype(P, :data)
+    return :($(D.parameters[1]))
+end
+
+function _matches_free_key(
+    v::SparseArraySlice{P,V,N,T,NF,MT,FT},
+    free_key,
+) where {P,V,N,T,NF,MT,FT}
+    return _select_generated(_project_free(v.mask, MT), free_key)
+end
 
 """
     slice(sa::AbstractSparseArray, mask...)
 
 Return a lazy `SparseArraySlice` over entries of `sa` matching `mask`. Use `:`
-for free (wildcard) dimensions and exact values for fixed dimensions. The result
-is an `AbstractSparseArray{V,NF}` where `NF` is the number of free dimensions.
+for wildcard dimensions, exact values for fixed dimensions, and predicates or
+ranges for filtered dimensions. The result is an `AbstractSparseArray{V,NF}`
+where `NF` is the number of non-exact dimensions.
 
 # Example
 ```julia
@@ -70,11 +93,11 @@ function slice(sa::AbstractSparseArray, mask...)
 end
 
 @generated function _make_slice(sa::P, mask::MT) where {P<:AbstractSparseArray,MT<:Tuple}
-    K = _keytype(P)
+    K = _parent_keytype(P)
     N = ndims(P)
     V = eltype(P)
     fieldcount(MT) != N && return :(throw(BoundsError(sa, mask)))
-    free = [fieldtypes(K)[i] for i in 1:N if fieldtypes(MT)[i] === Colon]
+    free = [fieldtypes(K)[i] for i in 1:N if !_is_exact_selector_type(fieldtypes(MT)[i])]
     NF = length(free)
     FT = Tuple{free...}
     return :(SparseArraySlice{$P,$V,$N,$K,$NF,$MT,$FT}(sa, mask))
@@ -113,6 +136,7 @@ function Base.getindex(
     v::SparseArraySlice{P,V,N,T,NF,MT,FT},
     free_key::FT,
 ) where {P,V,N,T,NF,MT,FT}
+    _matches_free_key(v, free_key) || return zero(V)
     return v.parent[_reconstruct_key(v.mask, free_key, T)]
 end
 
@@ -121,28 +145,17 @@ function Base.getindex(
     v::SparseArraySlice{P,V,N,T,NF,MT,FT},
     idx::NTuple{NF,Any},
 ) where {P,V,N,T,NF,MT,FT}
+    _matches_free_key(v, idx) || return zero(V)
     return v.parent[_reconstruct_key(v.mask, idx, T)]
 end
 
 # Splatted: v[f, c] or v[f] (NF==1)
-@generated function Base.getindex(
+function Base.getindex(
     v::SparseArraySlice{P,V,N,T,NF,MT,FT},
     idx...,
 ) where {P,V,N,T,NF,MT,FT}
-    if length(idx) != NF
-        return :(throw(BoundsError(v, idx)))
-    end
-    parts = Expr[]
-    fi = 1
-    for i in 1:fieldcount(T)
-        if fieldtypes(MT)[i] === Colon
-            push!(parts, :(idx[$fi]))
-            fi += 1
-        else
-            push!(parts, :(v.mask[$i]))
-        end
-    end
-    return :(v.parent[$(Expr(:tuple, parts...))])
+    length(idx) == NF || throw(BoundsError(v, idx))
+    return v[idx]
 end
 
 Base.setindex!(::SparseArraySlice, _, _...) = error("SparseArraySlice is read-only")
@@ -158,6 +171,7 @@ function Base.haskey(
     v::SparseArraySlice{P,V,N,T,NF,MT,FT},
     free_key::FT,
 ) where {P,V,N,T,NF,MT,FT}
+    _matches_free_key(v, free_key) || return false
     return haskey(_data(v.parent), _reconstruct_key(v.mask, free_key, T))
 end
 
@@ -186,5 +200,31 @@ function Base.sum(v::SparseArraySlice{P,V}) where {P,V}
     return sum(v.parent[k] for k in ks)
 end
 
-Base.show(io::IO, ::MIME"text/plain", v::SparseArraySlice) = summary(io, v)
+function Base.summary(io::IO, v::SparseArraySlice)
+    num_entries = length(v)
+    return print(
+        io,
+        "SparseArraySlice with ",
+        num_entries,
+        isone(num_entries) ? " entry" : " entries",
+        " matching ",
+        v.mask,
+    )
+end
+
+function Base.show(io::IO, ::MIME"text/plain", v::SparseArraySlice)
+    summary(io, v)
+    if !iszero(length(v))
+        println(io, ":")
+        entries = pairs(v)
+        if length(entries) > 20
+            show(io, first(entries, 10))
+            print(io, "\n ⋮\n")
+            show(io, last(entries, 10))
+        else
+            show(io, entries)
+        end
+    end
+end
+
 Base.show(io::IO, v::SparseArraySlice) = summary(io, v)

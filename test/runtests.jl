@@ -77,6 +77,10 @@ end
 
     @test car_cost["bmw", 2001] == 200
     @test car_cost["bmw", 2003] == 0
+    @test car_cost[endswith("s"), <(2000)] isa SparseArraySlice
+    @test length(car_cost[endswith("s"), <(2000)]) == 1
+    @test car_cost[endswith("s"), <(2000)]["lotus", 1957] == 500
+    @test car_cost[endswith("s"), <(2000)]["bmw", 2001] == 0
 
     @test length(car_cost) == 5
     @test car_cost["lotus", 1957] == 500
@@ -181,6 +185,10 @@ end
     # Slicing and lookup
     @test length(z["bmw", :]) == 2
     @test length(z[:, 2001]) == 2
+    @test z[endswith("w"), isodd] isa SparseArraySlice
+    @test length(z[endswith("w"), isodd]) == 1
+    @test haskey(z[endswith("w"), isodd], ("bmw", 2001))
+    @test !haskey(z[endswith("w"), isodd], ("bmw", 2002))
 
     @test typeof(z["bmw", 2001]) == VariableRef
     @test z["bmw", 20] == 0
@@ -390,6 +398,9 @@ const _test_sa = testdata_sa()
 
     # show / summary
     @test occursin("SparseArraySlice", sprint(summary, v))
+    @test occursin("matching (\"ford\", Colon())", sprint(summary, v))
+    @test occursin("(2000,) => 100", sprint(show, MIME("text/plain"), v))
+    @test occursin("(2001,) => 150", sprint(show, MIME("text/plain"), v))
 
     # read-only
     @test_throws MethodError (v[(2000,)] = 999)
