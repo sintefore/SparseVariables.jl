@@ -1,4 +1,4 @@
-﻿using Base: product
+using Base: product
 using Dictionaries
 using HiGHS
 using JuMP
@@ -49,7 +49,7 @@ end
 
     @variable(
         m,
-        car_vars[maker = cars, year = years, color = colors, kms = kms];
+        car_vars[maker=cars, year=years, color=colors, kms=kms];
         container = IndexedVarArray
     )
     @test typeof(car_vars) ==
@@ -118,14 +118,14 @@ end
     (; car_cost) = testdata1()
 
     m = Model()
-    @variable(m, y[c = cars, i = years]; container = IndexedVarArray)
+    @variable(m, y[c=cars, i=years]; container = IndexedVarArray)
     for (c, i) in collect(keys(car_cost))
         insertvar!(y, c, i)
     end
 
     @test typeof(y) == IndexedVarArray{VariableRef,2,Tuple{String,Int}}
 
-    @variable(m, w[c = cars, i = years], Bin; container = IndexedVarArray)
+    @variable(m, w[c=cars, i=years], Bin; container = IndexedVarArray)
     for (c, i) in collect(keys(car_cost))
         insertvar!(w, c, i)
     end
@@ -168,7 +168,7 @@ end
     m = Model()
     (; cars, year, car_cost) = testdata1(false)
 
-    @variable(m, z[cars = cars, year = year]; container = IndexedVarArray)
+    @variable(m, z[cars=cars, year=year]; container = IndexedVarArray)
 
     for (cr, yr) in keys(car_cost)
         insertvar!(z, cr, yr)
@@ -198,7 +198,7 @@ end
     @test length(z) == 5
 
     # Alternative constructor
-    @variable(m, z2[cars = cars, year = year], container = IndexedVarArray)
+    @variable(m, z2[cars=cars, year=year], container = IndexedVarArray)
     for k in keys(car_cost)
         insertvar!(z2, k...)
     end
@@ -209,7 +209,7 @@ end
 
     @variable(
         m,
-        z3[cars = cars, year = years, color = colors, km = kms];
+        z3[cars=cars, year=years, color=colors, km=kms];
         container = IndexedVarArray
     )
     for k in indices
@@ -239,7 +239,7 @@ end
     (; cars, year, car_cost) = testdata1(false)
 
     m = Model()
-    @variable(m, y[car = cars, year = year] >= 0; container = IndexedVarArray)
+    @variable(m, y[car=cars, year=year] >= 0; container = IndexedVarArray)
     for c in cars
         insertvar!(y, c, 2002)
     end
@@ -279,7 +279,7 @@ end
 
     # Test JuMP Extension
     m = Model()
-    @variable(m, x[i = 1:3, j = 100:102] >= 0, container = IndexedVarArray)
+    @variable(m, x[i=1:3, j=100:102] >= 0, container = IndexedVarArray)
     @test length(x) == 0
     insertvar!(x, 1, 100)
     @test length(x) == 1
@@ -324,7 +324,7 @@ end
     m = Model()
     @variable(
         m,
-        x[i = 1:3, j = 100:102] >= 0,
+        x[i=1:3, j=100:102] >= 0,
         Mocking(),
         container = IndexedVarArray
     )
@@ -355,9 +355,9 @@ const _test_sa = testdata_sa()
 
     # length
     @test length(slice(sa, "ford", :)) == 2
-    @test length(slice(sa, :, 2001))   == 2
-    @test length(slice(sa, :, :))      == 5
-    @test length(slice(sa, "xxx", :))  == 0
+    @test length(slice(sa, :, 2001)) == 2
+    @test length(slice(sa, :, :)) == 5
+    @test length(slice(sa, "xxx", :)) == 0
 
     # keys / values / eachindex / pairs
     ks = sort(keys(v))
@@ -369,17 +369,17 @@ const _test_sa = testdata_sa()
     @test ps[(2001,)] == 150
 
     # getindex
-    @test v[(2000,)]              == 100    # FT-tuple
+    @test v[(2000,)] == 100    # FT-tuple
     @test v[NTuple{1,Any}((2001,))] == 150  # NTuple{NF,Any}
-    @test v[2000]                 == 100    # splatted (NF==1)
-    @test v[2001]                 == 150
+    @test v[2000] == 100    # splatted (NF==1)
+    @test v[2001] == 150
 
     v2 = slice(sa, :, :)                   # NF==2
-    @test v2["ford", 2000]        == 100
-    @test v2["bmw", 2002]         == 300
+    @test v2["ford", 2000] == 100
+    @test v2["bmw", 2002] == 300
 
     # haskey
-    @test  haskey(v, (2000,))
+    @test haskey(v, (2000,))
     @test !haskey(v, (1999,))
 
     # sum
@@ -389,7 +389,7 @@ const _test_sa = testdata_sa()
 
     # firstindex / lastindex (d = parent-dimension index)
     @test SV.firstindex(v, 2) == 2000
-    @test SV.lastindex(v, 2)  == 2001
+    @test SV.lastindex(v, 2) == 2001
 
     # iteration (values only)
     @test sum(val for val in v) == 250
@@ -407,7 +407,7 @@ const _test_sa = testdata_sa()
     @test_throws ErrorException size(v)
 
     # wrong mask length
-    @test_throws BoundsError slice(sa, "ford", :, :)
+    @test_throws BoundsError slice(sa,"ford",:,:)
 
     # empty slice
     ve = slice(sa, "xxx", :)
@@ -420,7 +420,7 @@ end
 @testset "SparseArraySlice on IndexedVarArray" begin
     (; cars, year, car_cost) = testdata1(false)
     m = Model()
-    @variable(m, x[c = cars, y = year]; container = IndexedVarArray)
+    @variable(m, x[c=cars, y=year]; container = IndexedVarArray)
     for k in keys(car_cost)
         insertvar!(x, k...)
     end
@@ -466,7 +466,7 @@ end
     # element-wise binary
     r4 = sa .+ sa
     @test r4["ford", 2000] == 200
-    @test r4["bmw", 2002]  == 600
+    @test r4["bmw", 2002] == 600
 
     # function broadcast
     r5 = sqrt.(sa .* 1.0)
@@ -515,7 +515,7 @@ end
 @testset "Broadcasting IndexedVarArray" begin
     (; cars, year, car_cost) = testdata1(false)
     m = Model()
-    @variable(m, x[c = cars, y = year] >= 0; container = IndexedVarArray)
+    @variable(m, x[c=cars, y=year] >= 0; container = IndexedVarArray)
     for k in keys(car_cost)
         insertvar!(x, k...)
     end
@@ -545,7 +545,7 @@ end
 
     # key mismatch error
     m2 = Model()
-    @variable(m2, y[c = ["lotus"], yr = [1957]]; container = IndexedVarArray)
+    @variable(m2, y[c=["lotus"], yr=[1957]]; container = IndexedVarArray)
     insertvar!(y, "lotus", 1957)
     @test_throws ArgumentError x .+ y
 end

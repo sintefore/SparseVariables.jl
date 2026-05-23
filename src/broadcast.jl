@@ -13,8 +13,9 @@ materialised as `SparseArray`.
 """
 struct SparseBroadcastStyle{N,K} <: Broadcast.BroadcastStyle end
 
-Base.BroadcastStyle(::Type{SA}) where {SA<:AbstractSparseArray} =
-    SparseBroadcastStyle{ndims(SA),_keytype(SA)}()
+function Base.BroadcastStyle(::Type{SA}) where {SA<:AbstractSparseArray}
+    return SparseBroadcastStyle{ndims(SA),_keytype(SA)}()
+end
 
 # Disallow mixing with other array types.
 function Base.BroadcastStyle(::SparseBroadcastStyle, ::Base.BroadcastStyle)
@@ -63,19 +64,27 @@ function _sparse_getindex(
 end
 
 function _sparse_get_args(args::Tuple, key)
-    return (_sparse_getindex(first(args), key), _sparse_get_args(Base.tail(args), key)...)
+    return (
+        _sparse_getindex(first(args), key),
+        _sparse_get_args(Base.tail(args), key)...,
+    )
 end
 _sparse_get_args(::Tuple{}, ::Any) = ()
 
 function _sparse_check_same_keys(ref_keys, x::AbstractSparseArray, args...)
     if length(ref_keys) != length(x) || any(k -> !haskey(x, k), ref_keys)
-        throw(ArgumentError("Cannot broadcast SparseArrays with different indices"))
+        throw(
+            ArgumentError(
+                "Cannot broadcast SparseArrays with different indices",
+            ),
+        )
     end
     return _sparse_check_same_keys(ref_keys, args...)
 end
 
-_sparse_check_same_keys(ref_keys, ::Any, args...) =
-    _sparse_check_same_keys(ref_keys, args...)
+function _sparse_check_same_keys(ref_keys, ::Any, args...)
+    return _sparse_check_same_keys(ref_keys, args...)
+end
 _sparse_check_same_keys(::Any) = nothing
 
 function _sparse_indices(
@@ -104,9 +113,18 @@ function Base.copy(
     return SparseArray(Dictionary(indices, vals))
 end
 
-function Base.Broadcast.broadcast_preserving_zero_d(f, A::AbstractSparseArray, As...)
+function Base.Broadcast.broadcast_preserving_zero_d(
+    f,
+    A::AbstractSparseArray,
+    As...,
+)
     return broadcast(f, A, As...)
 end
-function Base.Broadcast.broadcast_preserving_zero_d(f, x, A::AbstractSparseArray, As...)
+function Base.Broadcast.broadcast_preserving_zero_d(
+    f,
+    x,
+    A::AbstractSparseArray,
+    As...,
+)
     return broadcast(f, x, A, As...)
 end

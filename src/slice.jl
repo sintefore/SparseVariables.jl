@@ -7,19 +7,28 @@ _is_exact_selector_type(::Type{<:Colon}) = false
 
 # Project tpl to the exact-match positions of MT.
 @generated function _project_fixed(tpl::T, ::Type{MT}) where {T,MT}
-    inds = [i for i in 1:fieldcount(T) if _is_exact_selector_type(fieldtypes(MT)[i])]
+    inds = [
+        i for i in 1:fieldcount(T) if _is_exact_selector_type(fieldtypes(MT)[i])
+    ]
     return :($(Expr(:tuple, [:(tpl[$i]) for i in inds]...)))
 end
 
 # Project tpl to the non-exact (free) positions of MT.
 @generated function _project_free(tpl::T, ::Type{MT}) where {T,MT}
-    inds = [i for i in 1:fieldcount(T) if !_is_exact_selector_type(fieldtypes(MT)[i])]
+    inds = [
+        i for
+        i in 1:fieldcount(T) if !_is_exact_selector_type(fieldtypes(MT)[i])
+    ]
     FT = Tuple{[fieldtypes(T)[i] for i in inds]...}
     return :($(Expr(:tuple, [:(tpl[$i]) for i in inds]...))::$FT)
 end
 
 # Reconstruct a full key T from the exact values in mask and the free key FT.
-@generated function _reconstruct_key(mask::MT, free_key::FT, ::Type{T}) where {MT,FT,T}
+@generated function _reconstruct_key(
+    mask::MT,
+    free_key::FT,
+    ::Type{T},
+) where {MT,FT,T}
     parts = Vector{Expr}(undef, fieldcount(T))
     fi = 1
     for i in 1:fieldcount(T)
@@ -43,21 +52,22 @@ projected key tuple type covering only the free dimensions. Implements
 
 Create via `slice(sa, mask...)`.
 """
-struct SparseArraySlice{
-    P<:AbstractSparseArray,
-    V,
-    N,
-    T,
-    NF,
-    MT<:Tuple,
-    FT<:Tuple,
-} <: AbstractSparseArray{V,NF}
+struct SparseArraySlice{P<:AbstractSparseArray,V,N,T,NF,MT<:Tuple,FT<:Tuple} <:
+       AbstractSparseArray{V,NF}
     parent::P
     mask::MT
 end
 
-_keytype(::Type{<:SparseArraySlice{P,V,N,T,NF,MT,FT}}) where {P,V,N,T,NF,MT,FT} = FT
-_parent_keytype(::Type{<:SparseArraySlice{P,V,N,T,NF,MT,FT}}) where {P,V,N,T,NF,MT,FT} = FT
+function _keytype(
+    ::Type{<:SparseArraySlice{P,V,N,T,NF,MT,FT}},
+) where {P,V,N,T,NF,MT,FT}
+    return FT
+end
+function _parent_keytype(
+    ::Type{<:SparseArraySlice{P,V,N,T,NF,MT,FT}},
+) where {P,V,N,T,NF,MT,FT}
+    return FT
+end
 
 @generated function _parent_keytype(::Type{P}) where {P<:AbstractSparseArray}
     :data in fieldnames(P) ||
@@ -92,12 +102,18 @@ function slice(sa::AbstractSparseArray, mask...)
     return _make_slice(sa, tuple(mask...))
 end
 
-@generated function _make_slice(sa::P, mask::MT) where {P<:AbstractSparseArray,MT<:Tuple}
+@generated function _make_slice(
+    sa::P,
+    mask::MT,
+) where {P<:AbstractSparseArray,MT<:Tuple}
     K = _parent_keytype(P)
     N = ndims(P)
     V = eltype(P)
     fieldcount(MT) != N && return :(throw(BoundsError(sa, mask)))
-    free = [fieldtypes(K)[i] for i in 1:N if !_is_exact_selector_type(fieldtypes(MT)[i])]
+    free = [
+        fieldtypes(K)[i] for
+        i in 1:N if !_is_exact_selector_type(fieldtypes(MT)[i])
+    ]
     NF = length(free)
     FT = Tuple{free...}
     return :(SparseArraySlice{$P,$V,$N,$K,$NF,$MT,$FT}(sa, mask))
@@ -116,7 +132,9 @@ Base.IteratorEltype(::Type{<:SparseArraySlice}) = Base.HasEltype()
 Base.eltype(::Type{<:SparseArraySlice{P,V}}) where {P,V} = V
 
 # Iteration: values only (AbstractArray semantics)
-function Base.iterate(v::SparseArraySlice{P,V,N,T,NF,MT,FT}) where {P,V,N,T,NF,MT,FT}
+function Base.iterate(
+    v::SparseArraySlice{P,V,N,T,NF,MT,FT},
+) where {P,V,N,T,NF,MT,FT}
     matching = _view_matching_keys(v)
     isempty(matching) && return nothing
     return (v.parent[matching[1]], (matching, 2))
@@ -158,7 +176,9 @@ function Base.getindex(
     return v[idx]
 end
 
-Base.setindex!(::SparseArraySlice, _, _...) = error("SparseArraySlice is read-only")
+function Base.setindex!(::SparseArraySlice, _, _...)
+    return error("SparseArraySlice is read-only")
+end
 
 function Base.size(::SparseArraySlice)
     return error(
@@ -177,15 +197,21 @@ end
 
 Base.length(v::SparseArraySlice) = length(_view_matching_keys(v))
 
-Base.keys(v::SparseArraySlice{P,V,N,T,NF,MT,FT}) where {P,V,N,T,NF,MT,FT} =
-    [_project_free(k, MT) for k in _view_matching_keys(v)]
+function Base.keys(
+    v::SparseArraySlice{P,V,N,T,NF,MT,FT},
+) where {P,V,N,T,NF,MT,FT}
+    return [_project_free(k, MT) for k in _view_matching_keys(v)]
+end
 
 Base.values(v::SparseArraySlice) = [v.parent[k] for k in _view_matching_keys(v)]
 
 Base.eachindex(v::SparseArraySlice) = keys(v)
 
-Base.pairs(v::SparseArraySlice{P,V,N,T,NF,MT,FT}) where {P,V,N,T,NF,MT,FT} =
-    [_project_free(k, MT) => v.parent[k] for k in _view_matching_keys(v)]
+function Base.pairs(
+    v::SparseArraySlice{P,V,N,T,NF,MT,FT},
+) where {P,V,N,T,NF,MT,FT}
+    return [_project_free(k, MT) => v.parent[k] for k in _view_matching_keys(v)]
+end
 
 function Base.firstindex(v::SparseArraySlice, d)
     return minimum(k[d] for k in _view_matching_keys(v))

@@ -127,8 +127,11 @@ _data(sa::SparseArray) = sa.data
 Return the key tuple type used by the sparse array. Required by `slice` and
 broadcasting. Implement `_keytype(::Type{MySA})` for every concrete subtype.
 """
-_keytype(::Type{<:AbstractSparseArray}) =
-    error("_keytype not implemented for this AbstractSparseArray subtype")
+function _keytype(::Type{<:AbstractSparseArray})
+    return error(
+        "_keytype not implemented for this AbstractSparseArray subtype",
+    )
+end
 _keytype(sa::AbstractSparseArray) = _keytype(typeof(sa))
 _keytype(::Type{<:SparseArray{T,N,K}}) where {T,N,K} = K
 

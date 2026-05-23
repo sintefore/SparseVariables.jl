@@ -104,9 +104,14 @@ set_cache_cutoff!(n::Int) = (global _CACHE_CUTOFF = n; nothing)
     return :($(all(t == Colon || isfixed(t) for t in fieldtypes(P))))
 end
 
-function _select_cached(sa::IndexedVarArray{V,N,T}, pat)::Vector{T} where {V,N,T}
-    length(_data(sa)) < _CACHE_CUTOFF && return collect(T, _select_gen(keys(_data(sa)), pat))
-    _is_cacheable_pattern(typeof(pat)) || return collect(T, _select_gen(keys(_data(sa)), pat))
+function _select_cached(
+    sa::IndexedVarArray{V,N,T},
+    pat,
+)::Vector{T} where {V,N,T}
+    length(_data(sa)) < _CACHE_CUTOFF &&
+        return collect(T, _select_gen(keys(_data(sa)), pat))
+    _is_cacheable_pattern(typeof(pat)) ||
+        return collect(T, _select_gen(keys(_data(sa)), pat))
     cache = _getcache(sa, pat)::Dictionary{_decode_nonslices(sa, pat),Vector{T}}
     build_cache!(cache, pat, sa)
     vals = _project_fixed(pat, typeof(pat))

@@ -34,11 +34,7 @@ export set_cache_cutoff!
         # all calls in this block will be precompiled, regardless of whether
         # they belong to your package or not (on Julia 1.8 and higher)
 
-        @variable(
-            m,
-            x[r = rs, i = is, st = sts, sy = sys];
-            container = IndexedVarArray
-        )
+        @variable(m, x[r=rs, i=is, st=sts, sy=sys]; container = IndexedVarArray)
         for r in rs, i in is, st in sts, sy in sys
             insertvar!(x, r, i, st, sy)
             unsafe_insertvar!(x, r, i, st, sy)
@@ -46,7 +42,7 @@ export set_cache_cutoff!
         x[:, 1, :, :]
         x[10, :, :, :]
         x[1, :, :, :a]
-        @variable(m, y[i = rs, j = rs, k = rs]; container = IndexedVarArray)
+        @variable(m, y[i=rs, j=rs, k=rs]; container = IndexedVarArray)
         for i in rs, j in rs, k in rs
             insertvar!(y, i, j, k)
         end
