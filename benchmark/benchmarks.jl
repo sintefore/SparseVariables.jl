@@ -296,7 +296,7 @@ function model_sparse(F, C, P, T, D, U, V, W)
     # Variable creation
     @variable(
         m,
-        x[factory = F, customer = C, product = P, period = T],
+        x[factory=F, customer=C, product=P, period=T],
         container = IndexedVarArray
     )
 
@@ -338,10 +338,10 @@ function model_sparse_aa(F, C, P, T, D, U, V, W)
     @variable(
         m,
         x[
-            factory = F,
-            customer = C,
-            product = P,
-            period = T;
+            factory=F,
+            customer=C,
+            product=P,
+            period=T;
             W[factory, product] == 1 && (factory, product, period) in keys(D),
         ] >= 0,
     )
