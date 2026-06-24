@@ -149,8 +149,26 @@ function Base.getindex(v::SparseArraySlice{P,V,NF,MT}, idx...) where {P,V,NF,MT}
     return v[idx]
 end
 
-function Base.setindex!(::SparseArraySlice, _, _...)
-    return error("SparseArraySlice is read-only")
+# Forward mutation to parent array
+function Base.setindex!(
+    v::SparseArraySlice{P,V,NF,MT},
+    val,
+    free_key::Tuple,
+) where {P,V,NF,MT}
+    length(free_key) == NF || throw(BoundsError(v, free_key))
+    T = _keytype(P)
+    v.parent[_reconstruct_key(v.mask, free_key, T)] = val
+    return val
+end
+
+# Splatted version
+function Base.setindex!(
+    v::SparseArraySlice{P,V,NF,MT},
+    val,
+    idx...,
+) where {P,V,NF,MT}
+    length(idx) == NF || throw(BoundsError(v, idx))
+    return setindex!(v, val, idx)
 end
 
 function Base.size(::SparseArraySlice)

@@ -396,15 +396,19 @@ const _test_sa = testdata_sa()
     @test Base.IteratorSize(typeof(v)) == Base.HasLength()
     @test Base.IteratorEltype(typeof(v)) == Base.HasEltype()
 
+    # setindex
+    v2["bmw", 2002] = 200
+    @test v2["bmw", 2002] == 200
+    @test sa["bmw", 2002] == 200
+    v2[("bmw", 2002)] = 300
+    @test v2[("bmw", 2002)] == 300
+    @test sa[("bmw", 2002)] == 300
+
     # show / summary
     @test occursin("SparseArraySlice", sprint(summary, v))
     @test occursin("matching (\"ford\", Colon())", sprint(summary, v))
     @test occursin("(2000,) => 100", sprint(show, MIME("text/plain"), v))
     @test occursin("(2001,) => 150", sprint(show, MIME("text/plain"), v))
-
-    # read-only
-    @test_throws MethodError (v[(2000,)] = 999)
-    @test_throws ErrorException size(v)
 
     # wrong mask length
     @test_throws BoundsError slice(sa, "ford", :, :)
