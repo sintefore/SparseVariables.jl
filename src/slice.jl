@@ -58,9 +58,7 @@ struct SparseArraySlice{P<:AbstractSparseArray,V,NF,MT<:Tuple} <:
     mask::MT
 end
 
-function _keytype(
-    ::Type{<:SparseArraySlice{P,V,NF,MT}},
-) where {P,V,NF,MT}
+function _keytype(::Type{<:SparseArraySlice{P,V,NF,MT}}) where {P,V,NF,MT}
     return _free_keytype(MT, _keytype(P))
 end
 
@@ -111,9 +109,7 @@ end
 end
 
 # Default: linear scan. Subtypes may override for cached lookup.
-function _view_matching_keys(
-    v::SparseArraySlice{P,V,NF,MT},
-) where {P,V,NF,MT}
+function _view_matching_keys(v::SparseArraySlice{P,V,NF,MT}) where {P,V,NF,MT}
     T = _keytype(P)
     return collect(T, _select_gen(keys(_data(v.parent)), v.mask))
 end
@@ -124,18 +120,13 @@ Base.IteratorEltype(::Type{<:SparseArraySlice}) = Base.HasEltype()
 Base.eltype(::Type{<:SparseArraySlice{P,V}}) where {P,V} = V
 
 # Iteration: values only (AbstractArray semantics)
-function Base.iterate(
-    v::SparseArraySlice,
-)
+function Base.iterate(v::SparseArraySlice)
     matching = _view_matching_keys(v)
     isempty(matching) && return nothing
     return (v.parent[matching[1]], (matching, 2))
 end
 
-function Base.iterate(
-    v::SparseArraySlice,
-    state::Tuple{Vector,Int},
-)
+function Base.iterate(v::SparseArraySlice, state::Tuple{Vector,Int})
     matching, pos = state
     pos > length(matching) && return nothing
     return (v.parent[matching[pos]], (matching, pos + 1))
@@ -153,10 +144,7 @@ function Base.getindex(
 end
 
 # Splatted: v[f, c] or v[f] (NF==1)
-function Base.getindex(
-    v::SparseArraySlice{P,V,NF,MT},
-    idx...,
-) where {P,V,NF,MT}
+function Base.getindex(v::SparseArraySlice{P,V,NF,MT}, idx...) where {P,V,NF,MT}
     length(idx) == NF || throw(BoundsError(v, idx))
     return v[idx]
 end
@@ -183,9 +171,7 @@ end
 
 Base.length(v::SparseArraySlice) = length(_view_matching_keys(v))
 
-function Base.keys(
-    v::SparseArraySlice{P,V,NF,MT},
-) where {P,V,NF,MT}
+function Base.keys(v::SparseArraySlice{P,V,NF,MT}) where {P,V,NF,MT}
     return [_project_free(k, MT) for k in _view_matching_keys(v)]
 end
 
@@ -193,9 +179,7 @@ Base.values(v::SparseArraySlice) = [v.parent[k] for k in _view_matching_keys(v)]
 
 Base.eachindex(v::SparseArraySlice) = keys(v)
 
-function Base.pairs(
-    v::SparseArraySlice{P,V,NF,MT},
-) where {P,V,NF,MT}
+function Base.pairs(v::SparseArraySlice{P,V,NF,MT}) where {P,V,NF,MT}
     return [_project_free(k, MT) => v.parent[k] for k in _view_matching_keys(v)]
 end
 

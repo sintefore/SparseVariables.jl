@@ -407,7 +407,7 @@ const _test_sa = testdata_sa()
     @test_throws ErrorException size(v)
 
     # wrong mask length
-    @test_throws BoundsError slice(sa,"ford",:,:)
+    @test_throws BoundsError slice(sa, "ford", :, :)
 
     # empty slice
     ve = slice(sa, "xxx", :)
