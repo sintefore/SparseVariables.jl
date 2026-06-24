@@ -43,43 +43,40 @@ end
 end
 
 """
-    SparseArraySlice{P,V,N,T,NF,MT,FT}
+    SparseArraySlice{P,V,NF,MT}
 
 A lazy, mask-filtered view of any `AbstractSparseArray`. `P` is the concrete
-parent type, `NF` is the number of free (Colon) dimensions, and `FT` is the
-projected key tuple type covering only the free dimensions. Implements
+parent type, `NF` is the number of non-exact dimensions, and `MT` is the
+mask type. Implements
 `AbstractSparseArray{V,NF}`.
 
 Create via `slice(sa, mask...)`.
 """
-struct SparseArraySlice{P<:AbstractSparseArray,V,N,T,NF,MT<:Tuple,FT<:Tuple} <:
+struct SparseArraySlice{P<:AbstractSparseArray,V,NF,MT<:Tuple} <:
        AbstractSparseArray{V,NF}
     parent::P
     mask::MT
 end
 
 function _keytype(
-    ::Type{<:SparseArraySlice{P,V,N,T,NF,MT,FT}},
-) where {P,V,N,T,NF,MT,FT}
-    return FT
-end
-function _parent_keytype(
-    ::Type{<:SparseArraySlice{P,V,N,T,NF,MT,FT}},
-) where {P,V,N,T,NF,MT,FT}
-    return FT
+    ::Type{<:SparseArraySlice{P,V,NF,MT}},
+) where {P,V,NF,MT}
+    return _free_keytype(MT, _keytype(P))
 end
 
-@generated function _parent_keytype(::Type{P}) where {P<:AbstractSparseArray}
-    :data in fieldnames(P) ||
-        error("cannot infer key type for this AbstractSparseArray subtype")
-    D = fieldtype(P, :data)
-    return :($(D.parameters[1]))
+@generated function _free_keytype(::Type{MT}, ::Type{T}) where {MT,T}
+    inds = [
+        i for
+        i in 1:fieldcount(T) if !_is_exact_selector_type(fieldtypes(MT)[i])
+    ]
+    FT = Tuple{[fieldtypes(T)[i] for i in inds]...}
+    return :($FT)
 end
 
 function _matches_free_key(
-    v::SparseArraySlice{P,V,N,T,NF,MT,FT},
+    v::SparseArraySlice{P,V,NF,MT},
     free_key,
-) where {P,V,N,T,NF,MT,FT}
+) where {P,V,NF,MT}
     return _select_generated(_project_free(v.mask, MT), free_key)
 end
 
@@ -106,23 +103,18 @@ end
     sa::P,
     mask::MT,
 ) where {P<:AbstractSparseArray,MT<:Tuple}
-    K = _parent_keytype(P)
     N = ndims(P)
     V = eltype(P)
     fieldcount(MT) != N && return :(throw(BoundsError(sa, mask)))
-    free = [
-        fieldtypes(K)[i] for
-        i in 1:N if !_is_exact_selector_type(fieldtypes(MT)[i])
-    ]
-    NF = length(free)
-    FT = Tuple{free...}
-    return :(SparseArraySlice{$P,$V,$N,$K,$NF,$MT,$FT}(sa, mask))
+    NF = count(i -> !_is_exact_selector_type(fieldtypes(MT)[i]), 1:N)
+    return :(SparseArraySlice{$P,$V,$NF,$MT}(sa, mask))
 end
 
 # Default: linear scan. Subtypes may override for cached lookup.
 function _view_matching_keys(
-    v::SparseArraySlice{P,V,N,T,NF,MT,FT},
-)::Vector{T} where {P,V,N,T,NF,MT,FT}
+    v::SparseArraySlice{P,V,NF,MT},
+) where {P,V,NF,MT}
+    T = _keytype(P)
     return collect(T, _select_gen(keys(_data(v.parent)), v.mask))
 end
 
@@ -133,17 +125,17 @@ Base.eltype(::Type{<:SparseArraySlice{P,V}}) where {P,V} = V
 
 # Iteration: values only (AbstractArray semantics)
 function Base.iterate(
-    v::SparseArraySlice{P,V,N,T,NF,MT,FT},
-) where {P,V,N,T,NF,MT,FT}
+    v::SparseArraySlice,
+)
     matching = _view_matching_keys(v)
     isempty(matching) && return nothing
     return (v.parent[matching[1]], (matching, 2))
 end
 
 function Base.iterate(
-    v::SparseArraySlice{P,V,N,T,NF,MT,FT},
-    state::Tuple{Vector{T},Int},
-) where {P,V,N,T,NF,MT,FT}
+    v::SparseArraySlice,
+    state::Tuple{Vector,Int},
+)
     matching, pos = state
     pos > length(matching) && return nothing
     return (v.parent[matching[pos]], (matching, pos + 1))
@@ -151,27 +143,20 @@ end
 
 # getindex by FT tuple: v[(f, c)]
 function Base.getindex(
-    v::SparseArraySlice{P,V,N,T,NF,MT,FT},
-    free_key::FT,
-) where {P,V,N,T,NF,MT,FT}
+    v::SparseArraySlice{P,V,NF,MT},
+    free_key::Tuple,
+) where {P,V,NF,MT}
+    length(free_key) == NF || throw(BoundsError(v, free_key))
+    T = _keytype(P)
     _matches_free_key(v, free_key) || return zero(V)
     return v.parent[_reconstruct_key(v.mask, free_key, T)]
 end
 
-# Disambiguate vs AbstractSparseArray's NTuple method.
-function Base.getindex(
-    v::SparseArraySlice{P,V,N,T,NF,MT,FT},
-    idx::NTuple{NF,Any},
-) where {P,V,N,T,NF,MT,FT}
-    _matches_free_key(v, idx) || return zero(V)
-    return v.parent[_reconstruct_key(v.mask, idx, T)]
-end
-
 # Splatted: v[f, c] or v[f] (NF==1)
 function Base.getindex(
-    v::SparseArraySlice{P,V,N,T,NF,MT,FT},
+    v::SparseArraySlice{P,V,NF,MT},
     idx...,
-) where {P,V,N,T,NF,MT,FT}
+) where {P,V,NF,MT}
     length(idx) == NF || throw(BoundsError(v, idx))
     return v[idx]
 end
@@ -188,9 +173,10 @@ function Base.size(::SparseArraySlice)
 end
 
 function Base.haskey(
-    v::SparseArraySlice{P,V,N,T,NF,MT,FT},
-    free_key::FT,
-) where {P,V,N,T,NF,MT,FT}
+    v::SparseArraySlice{P,V,NF,MT},
+    free_key::Tuple,
+) where {P,V,NF,MT}
+    T = _keytype(P)
     _matches_free_key(v, free_key) || return false
     return haskey(_data(v.parent), _reconstruct_key(v.mask, free_key, T))
 end
@@ -198,8 +184,8 @@ end
 Base.length(v::SparseArraySlice) = length(_view_matching_keys(v))
 
 function Base.keys(
-    v::SparseArraySlice{P,V,N,T,NF,MT,FT},
-) where {P,V,N,T,NF,MT,FT}
+    v::SparseArraySlice{P,V,NF,MT},
+) where {P,V,NF,MT}
     return [_project_free(k, MT) for k in _view_matching_keys(v)]
 end
 
@@ -208,8 +194,8 @@ Base.values(v::SparseArraySlice) = [v.parent[k] for k in _view_matching_keys(v)]
 Base.eachindex(v::SparseArraySlice) = keys(v)
 
 function Base.pairs(
-    v::SparseArraySlice{P,V,N,T,NF,MT,FT},
-) where {P,V,N,T,NF,MT,FT}
+    v::SparseArraySlice{P,V,NF,MT},
+) where {P,V,NF,MT}
     return [_project_free(k, MT) => v.parent[k] for k in _view_matching_keys(v)]
 end
 

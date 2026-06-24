@@ -196,8 +196,8 @@ end
 
 # Override _view_matching_keys for IndexedVarArray parent: use index cache.
 function _view_matching_keys(
-    v::SparseArraySlice{P,V,N,T,NF,MT,FT},
-)::Vector{T} where {P<:IndexedVarArray,V,N,T,NF,MT,FT}
+    v::SparseArraySlice{P,V,NF,MT},
+) where {P<:IndexedVarArray,V,NF,MT}
     return _select_cached(v.parent, v.mask)
 end
 
