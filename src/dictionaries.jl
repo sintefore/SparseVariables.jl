@@ -12,7 +12,8 @@ make_filter_fun(c) = x -> x == c
 make_filter_fun(c::Base.Fix2) = x -> c(x)
 make_filter_fun(c::Function) = x -> c(x)
 make_filter_fun(c::Colon) = x -> true
-make_filter_fun(c::UnitRange) = x -> (x ≥ c.start && x ≤ c.stop)
+make_filter_fun(c::AbstractRange, pos) = x -> x[pos] in c
+make_filter_fun(c::AbstractRange) = x -> x in c
 
 """
 	recursive_filter(fs, data)
