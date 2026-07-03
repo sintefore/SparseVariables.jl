@@ -56,6 +56,10 @@ struct SparseArraySlice{P<:AbstractSparseArray,V,NF,MT<:Tuple} <:
        AbstractSparseArray{V,NF}
     parent::P
     mask::MT
+    _cache::Ref{Any}
+    function SparseArraySlice{P,V,NF,MT}(parent::P, mask::MT) where {P,V,NF,MT}
+        return new{P,V,NF,MT}(parent, mask, Ref{Any}(nothing))
+    end
 end
 
 function _keytype(::Type{<:SparseArraySlice{P,V,NF,MT}}) where {P,V,NF,MT}
@@ -108,10 +112,14 @@ end
     return :(SparseArraySlice{$P,$V,$NF,$MT}(sa, mask))
 end
 
-# Default: linear scan. Subtypes may override for cached lookup.
+# Default: linear scan with memoization. Subtypes may override for cached lookup.
 function _view_matching_keys(v::SparseArraySlice{P,V,NF,MT}) where {P,V,NF,MT}
+    cached = v._cache[]
+    cached !== nothing && return cached::Vector{_keytype(P)}
     T = _keytype(P)
-    return collect(T, _select_gen(keys(_data(v.parent)), v.mask))
+    keys_vec = collect(T, _select_gen(keys(_data(v.parent)), v.mask))
+    v._cache[] = keys_vec
+    return keys_vec
 end
 
 # Iterator traits
