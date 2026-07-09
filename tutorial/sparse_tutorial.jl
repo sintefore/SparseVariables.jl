@@ -186,8 +186,8 @@ begin
             @constraint(
                 m,
                 sum(
-                    x[f, c, p, t] for (f, c, p, t) in
-                    filter(i -> i[1] == f̄ && i[4] == t̄, indices)
+                    x[f, c, p, t] for
+                    (f, c, p, t) in filter(i -> i[1] == f̄ && i[4] == t̄, indices)
                 ) ≤ U[f̄, t̄]
             )
         end
@@ -244,8 +244,8 @@ begin
             @constraint(
                 m,
                 sum(
-                    x[(f, c, p, t)] for (f, c, p, t) in
-                    filter(i -> i[1] == f̄ && i[4] == t̄, indices)
+                    x[(f, c, p, t)] for
+                    (f, c, p, t) in filter(i -> i[1] == f̄ && i[4] == t̄, indices)
                 ) ≤ U[f̄, t̄]
             )
         end
