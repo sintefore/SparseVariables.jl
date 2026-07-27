@@ -7,21 +7,20 @@
 """
     SparseBroadcastStyle{N,K} <: Broadcast.BroadcastStyle
 
-Broadcasting style for all `AbstractSparseArray` subtypes. `N` is the key
-dimensionality and `K` is the key tuple type. All broadcast results are
-materialised as `SparseArray`.
+Broadcasting style for all `AbstractSparseArray` subtypes. `K` is the key tuple type.
+All broadcast results are materialised as `SparseArray`.
 """
-struct SparseBroadcastStyle{N,K} <: Broadcast.BroadcastStyle end
+struct SparseBroadcastStyle{K} <: Broadcast.BroadcastStyle end
 
 function Base.BroadcastStyle(::Type{SA}) where {SA<:AbstractSparseArray}
-    return SparseBroadcastStyle{ndims(SA),_keytype(SA)}()
+    return SparseBroadcastStyle{_keytype(SA)}()
 end
 
 # Disallow mixing with other array types.
 function Base.BroadcastStyle(::SparseBroadcastStyle, ::Base.BroadcastStyle)
     return throw(
         ArgumentError(
-            "Cannot broadcast a SparseArray with another array of a different type",
+            "Cannot broadcast a SparseArray with incompatible key types",
         ),
     )
 end
@@ -50,8 +49,7 @@ function Base.Broadcast.instantiate(
     return bc
 end
 
-# ── Internal helpers ──────────────────────────────────────────────────────────
-
+# Internal helpers
 _sparse_getindex(x::AbstractSparseArray, key) = x[key]
 _sparse_getindex(x::Any, ::Any) = x
 _sparse_getindex(x::Ref, ::Any) = x[]
@@ -102,13 +100,14 @@ end
 
 _sparse_indices(::Any, rest...) = _sparse_indices(rest...)
 
-# ── Materialise ───────────────────────────────────────────────────────────────
+# Materialise
 
 function Base.copy(
-    bc::Base.Broadcast.Broadcasted{SparseBroadcastStyle{N,K}},
-) where {N,K}
+    bc::Base.Broadcast.Broadcasted{SparseBroadcastStyle{K}},
+) where {K}
     indices = _sparse_indices(bc)
-    isempty(indices) && return SparseArray(Dictionary{K,Any}())
+    T = Base.Broadcast.combine_eltypes(bc.f, bc.args)
+    isempty(indices) && return SparseArray(Dictionary{K,T}())
     vals = [_sparse_getindex(bc, k) for k in indices]
     return SparseArray(Dictionary(indices, vals))
 end

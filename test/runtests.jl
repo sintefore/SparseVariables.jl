@@ -491,6 +491,28 @@ end
     @test length(r_empty) == 0
 end
 
+@testset "Broadcasting SparseArray with JuMP scalar" begin
+    sa = _test_sa            # SparseArray{Int} keyed by (String, Int)
+    m = Model()
+    @variable(m, t)
+
+    # sa .* scalar-variable
+    ra = sa .* t
+    @test ra isa SparseArray
+    @test eltype(ra) <: JuMP.AbstractJuMPScalar
+    @test JuMP.isequal_canonical(ra["ford", 2000], 100 * t)
+    @test length(ra) == length(sa)
+
+    # scalar-variable on the left
+    ra2 = t .* sa
+    @test JuMP.isequal_canonical(ra2["bmw", 2001], 200 * t)
+
+    # sa .+ scalar-expression
+    rb = sa .+ (2t + 1)
+    @test rb isa SparseArray
+    @test JuMP.isequal_canonical(rb["ford", 2000], 100 + 2t + 1)
+end
+
 @testset "Broadcasting SparseArraySlice" begin
     sa = _test_sa
 
