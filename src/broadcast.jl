@@ -5,7 +5,7 @@
 # ------------------------------------------------------------------------------
 
 """
-    SparseBroadcastStyle{N,K} <: Broadcast.BroadcastStyle
+    SparseBroadcastStyle{K} <: Broadcast.BroadcastStyle
 
 Broadcasting style for all `AbstractSparseArray` subtypes. `K` is the key tuple type.
 All broadcast results are materialised as `SparseArray`.
