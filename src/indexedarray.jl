@@ -160,12 +160,13 @@ end
 
 function _getcache(sa::IndexedVarArray{V,N,T}, pat::P) where {V,N,T,P}
     t = _get_cache_index(pat)
-    if isassigned(sa.index_cache, t)
-        return sa.index_cache[t]
+    idx = t + 1
+    if isassigned(sa.index_cache, idx)
+        return sa.index_cache[idx]
     else
-        sa.index_cache[t] = Dictionary{_decode_nonslices(sa, t),Vector{T}}()
+        sa.index_cache[idx] = Dictionary{_decode_nonslices(sa, t),Vector{T}}()
     end
-    return sa.index_cache[t]
+    return sa.index_cache[idx]
 end
 
 # Extension for standard JuMP macros

@@ -222,9 +222,9 @@ end
     @test length(z3["bmw", :, :, :]) ==
           length(filter(x -> x[1] == "bmw", indices))
 
-    @test length(z3.index_cache[4]) == length(unique(i[2] for i in indices))
+    @test length(z3.index_cache[5]) == length(unique(i[2] for i in indices))
     SparseVariables.clear_cache!(z3)
-    @test length(z3.index_cache[4]) == 0
+    @test length(z3.index_cache[5]) == 0
 
     # Begin/End
     @test length(z3[:, begin:2000, :, :]) ==
@@ -233,6 +233,39 @@ end
           length(filter(x -> x[2] >= 1990, indices))
     @test length(z3[:, 1990:2000, :, :]) ==
           length(filter(x -> x[2] >= 1990 && x[2] <= 2000, indices))
+end
+
+@testset "IndexedVarArray all-colon cache" begin
+    (; cars, year, car_cost) = testdata1(false)
+    m = Model()
+    @variable(m, x[c=cars, y=year]; container = IndexedVarArray)
+    for k in keys(car_cost)
+        insertvar!(x, k...)
+    end
+    n = length(x)                      # 4 entries
+
+    old_cutoff = SV._CACHE_CUTOFF
+    try
+        SV.set_cache_cutoff!(0)        # force the cached path for any size
+
+        @test length(SV.select(x, :, :)) == n
+
+        sl = x[:, :]
+        @test sl isa SparseArraySlice
+        @test length(sl) == n
+        @test sum(sl) isa AffExpr
+
+        sl2 = slice(x, :, :)
+        @test length(sl2) == n
+
+        @test length(SV.select(x, "ford", :)) == 2
+        @test length(SV.select(x, :, 2001)) == 2
+
+        @test isassigned(x.index_cache, 1)
+        @test !isempty(x.index_cache[1])
+    finally
+        SV.set_cache_cutoff!(old_cutoff)
+    end
 end
 
 @testset "Tables IndexedVarArray" begin
