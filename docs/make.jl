@@ -9,7 +9,7 @@ pages = [
     "API reference" => "reference/api.md",
 ]
 
-Documenter.makedocs(
+Documenter.makedocs(;
     sitename = "SparseVariables",
     format = Documenter.HTML(;
         prettyurls = get(ENV, "CI", "false") == "true",
