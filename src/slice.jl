@@ -90,6 +90,13 @@ for wildcard dimensions, exact values for fixed dimensions, and predicates or
 ranges for filtered dimensions. The result is an `AbstractSparseArray{V,NF}`
 where `NF` is the number of non-exact dimensions.
 
+!!! note
+
+    Slices materialise their matching keys lazily on first access and cache
+    them. Mutating through the slice invalidates the cache, but edits made
+    directly to the parent array afterwards are not tracked — re-create the
+    slice if the parent changes.
+
 # Example
 ```julia
 v = slice(sa, :, "foo", :)               # NF=2, two free dimensions
@@ -166,6 +173,7 @@ function Base.setindex!(
     length(free_key) == NF || throw(BoundsError(v, free_key))
     T = _keytype(P)
     v.parent[_reconstruct_key(v.mask, free_key, T)] = val
+    v._cache[] = nothing   # invalidate: a new matching key may have been added
     return val
 end
 
@@ -209,11 +217,11 @@ function Base.pairs(v::SparseArraySlice{P,V,NF,MT}) where {P,V,NF,MT}
     return [_project_free(k, MT) => v.parent[k] for k in _view_matching_keys(v)]
 end
 
-function Base.firstindex(v::SparseArraySlice, d)
-    return minimum(k[d] for k in _view_matching_keys(v))
+function Base.firstindex(v::SparseArraySlice{P,V,NF,MT}, d) where {P,V,NF,MT}
+    return minimum(_project_free(k, MT)[d] for k in _view_matching_keys(v))
 end
-function Base.lastindex(v::SparseArraySlice, d)
-    return maximum(k[d] for k in _view_matching_keys(v))
+function Base.lastindex(v::SparseArraySlice{P,V,NF,MT}, d) where {P,V,NF,MT}
+    return maximum(_project_free(k, MT)[d] for k in _view_matching_keys(v))
 end
 
 function Base.sum(v::SparseArraySlice{P,V}) where {P,V}

@@ -340,6 +340,43 @@ end
 
 const _test_sa = testdata_sa()
 
+@testset "SparseArraySlice cache invalidation" begin
+    sa = SparseArray(
+        Dict(
+            ("ford", 2000) => 100,
+            ("ford", 2001) => 150,
+            ("bmw", 2001) => 200,
+        ),
+    )
+
+    v = slice(sa, "ford", :)
+    @test length(v) == 2
+
+    # Add a matching entry through the slice
+    v[(2002,)] = 175
+    @test length(v) == 3              # cache invalidated + recomputed
+    @test v[(2002,)] == 175
+    @test Set(keys(v)) == Set([(2000,), (2001,), (2002,)])
+    @test sort(values(v)) == [100, 150, 175]
+    @test sum(v) == 100 + 150 + 175
+
+    # Add another matching entry using splatted setindex!
+    v[2003] = 50
+    @test length(v) == 4
+    @test v[2003] == 50
+    @test sa["ford", 2003] == 50     # parent updated
+    @test length(sa) == 5
+
+    # Update an existing free key: count unchanged, value refreshed
+    v[(2000,)] = 999
+    @test length(v) == 4
+    @test v[(2000,)] == 999
+
+    # Mutating through the slice must not affect a non-matching dim
+    @test v[(2001,)] == 150
+    @test sa["bmw", 2001] == 200
+end
+
 @testset "SparseArraySlice on SparseArray" begin
     sa = _test_sa
 
@@ -387,9 +424,9 @@ const _test_sa = testdata_sa()
     @test sum(slice(sa, :, 2001)) == 350
     @test sum(slice(sa, "xxx", :)) == 0
 
-    # firstindex / lastindex (d = parent-dimension index)
-    @test SV.firstindex(v, 2) == 2000
-    @test SV.lastindex(v, 2) == 2001
+    # firstindex / lastindex (d = free-dimension index, 1:NF)
+    @test SV.firstindex(v, 1) == 2000
+    @test SV.lastindex(v, 1) == 2001
 
     # iteration (values only)
     @test sum(val for val in v) == 250
