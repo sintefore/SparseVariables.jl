@@ -360,7 +360,7 @@ function create_vars_indexedtable(m, pp)
         C,
         P,
         T,
-        V,
+        V;
         names = [:factory, :customer, :product, :period, :var],
         pkey = [:factory, :customer, :product, :period],
     )
@@ -371,7 +371,7 @@ function create_constraints_indexedtable(m, pp)
     flow = m[:flow]
 
     # Production capacity
-    pc_table = groupby(collect, flow, (:factory, :product), select = :var)
+    pc_table = groupby(collect, flow, (:factory, :product); select = :var)
     for r in rows(pc_table)
         if (r.factory, r.product) in keys(pp.prodcap)
             @constraint(
@@ -384,7 +384,7 @@ function create_constraints_indexedtable(m, pp)
 
     # Customer demand
     cpp_table =
-        groupby(collect, flow, (:customer, :product, :period), select = :var)
+        groupby(collect, flow, (:customer, :product, :period); select = :var)
     for r in rows(cpp_table)
         if (r.customer, r.product, r.period) in keys(pp.demand)
             @constraint(
@@ -397,7 +397,7 @@ function create_constraints_indexedtable(m, pp)
 
     # Transport capacity
     fc_table =
-        groupby(collect, flow, (:factory, :customer, :period), select = :var)
+        groupby(collect, flow, (:factory, :customer, :period); select = :var)
     for r in rows(fc_table)
         if (r.factory, r.customer) in keys(pp.flowcap)
             @constraint(

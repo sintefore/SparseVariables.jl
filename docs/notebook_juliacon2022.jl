@@ -408,7 +408,7 @@ REPS = 5
 
 # ╔═╡ 04570ea7-885c-4d0e-be88-eb2a5f77da90
 begin
-    res = DataFrame(Method = Symbol[], NC = Int[], Time = Float64[])
+    res = DataFrame(; Method = Symbol[], NC = Int[], Time = Float64[])
     @progress for nc in 5:10:100
         for method in [
             model_standard,
@@ -428,7 +428,7 @@ end
 
 # ╔═╡ cc097148-23b1-4584-a150-c7f22376b65c
 begin
-    sparsity = DataFrame(Method = Symbol[], DP = Float64[], Time = Float64[])
+    sparsity = DataFrame(; Method = Symbol[], DP = Float64[], Time = Float64[])
     @progress for dp in 0.05:0.05:1.0
         for method in [
             model_standard,
@@ -462,10 +462,10 @@ end
 
 # ╔═╡ b0aa0499-e920-4014-b0b2-ce8ea3da7c95
 function plot(df, x = :NC, y = :Time)
-    CairoMakie.activate!(type = "svg")
+    CairoMakie.activate!(; type = "svg")
     return draw(
         data(df) *
-        mapping(x, y => "Time (s)", color = :Method, marker = :Method) *
+        mapping(x, y => "Time (s)"; color = :Method, marker = :Method) *
         (visual(Lines) + visual(Scatter)),
     )
 end

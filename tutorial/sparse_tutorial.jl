@@ -6,7 +6,7 @@ using InteractiveUtils
 
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
-    quote
+    return quote
         local iv = try
             Base.loaded_modules[Base.PkgId(
                 Base.UUID("6e696c72-6542-2067-7265-42206c756150"),
@@ -186,8 +186,8 @@ begin
             @constraint(
                 m,
                 sum(
-                    x[f, c, p, t] for (f, c, p, t) in
-                    filter(i -> i[1] == f̄ && i[4] == t̄, indices)
+                    x[f, c, p, t] for
+                    (f, c, p, t) in filter(i -> i[1] == f̄ && i[4] == t̄, indices)
                 ) ≤ U[f̄, t̄]
             )
         end
@@ -244,8 +244,8 @@ begin
             @constraint(
                 m,
                 sum(
-                    x[(f, c, p, t)] for (f, c, p, t) in
-                    filter(i -> i[1] == f̄ && i[4] == t̄, indices)
+                    x[(f, c, p, t)] for
+                    (f, c, p, t) in filter(i -> i[1] == f̄ && i[4] == t̄, indices)
                 ) ≤ U[f̄, t̄]
             )
         end
@@ -377,7 +377,7 @@ md"
 
 # ╔═╡ c49a3599-65fd-442b-b5c9-625b87e05efa
 begin
-    res = DataFrame(Method = Symbol[], NC = Int[], Time = Float64[])
+    res = DataFrame(; Method = Symbol[], NC = Int[], Time = Float64[])
     @progress for nc in 5:5:50
         for method in [
             model_standard,
@@ -398,10 +398,10 @@ res
 
 # ╔═╡ 5ca68304-0c21-4344-a92b-0594c04674a4
 function plot(df, x = :NC, y = :Time)
-    CairoMakie.activate!(type = "svg")
+    CairoMakie.activate!(; type = "svg")
     return draw(
         data(df) *
-        mapping(x, y, color = :Method, marker = :Method) *
+        mapping(x, y; color = :Method, marker = :Method) *
         (visual(Lines) + visual(Scatter)),
     )
 end
@@ -416,7 +416,7 @@ md"
 
 # ╔═╡ 1d68c8c0-1dbc-4d8b-97ae-3db1d2b06a4f
 begin
-    sparsity = DataFrame(Method = Symbol[], DP = Float64[], Time = Float64[])
+    sparsity = DataFrame(; Method = Symbol[], DP = Float64[], Time = Float64[])
     @progress for dp in 0.05:0.05:1.0
         for method in [
             model_standard,
@@ -442,8 +442,12 @@ plot(sparsity, :DP, :Time)
 
 # ╔═╡ deefc30f-4846-49db-8ce8-69b4aec14924
 begin
-    large =
-        DataFrame(Method = Symbol[], nc = Int[], vars = Int[], Time = Float64[])
+    large = DataFrame(;
+        Method = Symbol[],
+        nc = Int[],
+        vars = Int[],
+        Time = Float64[],
+    )
     @progress for nc in 500:500:5000
         for method in [model_incremental, model_sparse]
             GC.gc()

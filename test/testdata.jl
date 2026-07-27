@@ -26,6 +26,18 @@ function testdata(N = 998)
     )
 end
 
+function testdata_sa()
+    return SparseVariables.SparseArray(
+        Dict(
+            ("ford", 2000) => 100,
+            ("ford", 2001) => 150,
+            ("bmw", 2001) => 200,
+            ("bmw", 2002) => 300,
+            ("lotus", 1957) => 500,
+        ),
+    )
+end
+
 function testdata1(addlotus = true)
     cars = ["ford", "bmw", "opel"]
     year = [2000, 2001, 2002, 2003]

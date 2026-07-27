@@ -14,6 +14,7 @@ struct SafeInsert end
 struct UnsafeInsert end
 
 _data(sa::IndexedVarArray) = sa.data
+_keytype(::Type{<:IndexedVarArray{V,N,T}}) where {V,N,T} = T
 
 already_defined(var, index) = haskey(_data(var), index)
 
@@ -59,43 +60,24 @@ function insertvar!(
     ::UnsafeInsert,
     index...,
 ) where {V,N,T}
+    clear_cache!(var)
     return var[index] = var.f(index...)
 end
 
 """
     unsafe_insertvar!(var::indexedVarArray{V,N,T}, index...)
 
-Insert a new variable with the given index withouth checking if the index is valid or 
+Insert a new variable with the given index without checking if the index is valid or
  already assigned.
 """
 function unsafe_insertvar!(var::IndexedVarArray{V,N,T}, index...) where {V,N,T}
     return insertvar!(var, UnsafeInsert(), index...)
 end
 
-joinex(ex1, ex2) = :($ex1..., $ex2...)
-@generated function _active(idx::I, pat::P) where {I,P}
-    ids = fieldtypes(I)
-    ps = fieldtypes(P)
-    exs = []
-    for i in 1:length(ids)
-        if ps[i] != Colon
-            if i > 2
-                push!(exs, :(a1 = idx[$i],))
-            else
-                push!(exs, :(idx[$i],))
-            end
-        end
-    end
-    for i in 1:length(exs)-1
-        exs[i+1] = joinex(exs[i], exs[i+1])
-    end
-    return :(tuple($(exs[end])...))
-end
-
 function build_cache!(cache, pat, sa::IndexedVarArray{V,N,T}) where {V,N,T}
     if isempty(cache)
         for v in keys(sa)
-            vred = _active(v, pat)
+            vred = _project_fixed(v, typeof(pat))
             nv = get!(cache, vred, T[])
             push!(nv, v)
         end
@@ -103,13 +85,36 @@ function build_cache!(cache, pat, sa::IndexedVarArray{V,N,T}) where {V,N,T}
     return cache
 end
 
-function _select_cached(sa::IndexedVarArray{V,N,T}, pat) where {V,N,T}
-    # TODO: Benchmark to find good cutoff-value for caching
-    # TODO: Return same type for type stability
-    length(_data(sa)) < 100 && return _select_gen(keys(_data(sa)), pat)
+# Minimum number of entries before the index cache is used; below this a
+# linear scan is assumed cheaper. Tune with set_cache_cutoff! or calibrate with
+# benchmark/cutoff_benchmark.jl.
+_CACHE_CUTOFF::Int = 100
+
+"""
+    set_cache_cutoff!(n::Int)
+
+Set the minimum number of entries in an `IndexedVarArray` at which
+selection switches from a linear scan to the pre-built
+index cache.  Smaller values favour caching; larger values favour the linear
+scan for small arrays.  Default: `100`.
+"""
+set_cache_cutoff!(n::Int) = (global _CACHE_CUTOFF = n; nothing)
+
+@generated function _is_cacheable_pattern(::Type{P}) where {P<:Tuple}
+    return :($(all(t == Colon || isfixed(t) for t in fieldtypes(P))))
+end
+
+function _select_cached(
+    sa::IndexedVarArray{V,N,T},
+    pat,
+)::Vector{T} where {V,N,T}
+    length(_data(sa)) < _CACHE_CUTOFF &&
+        return collect(T, _select_gen(keys(_data(sa)), pat))
+    _is_cacheable_pattern(typeof(pat)) ||
+        return collect(T, _select_gen(keys(_data(sa)), pat))
     cache = _getcache(sa, pat)::Dictionary{_decode_nonslices(sa, pat),Vector{T}}
     build_cache!(cache, pat, sa)
-    vals = _dropslices_gen(pat)
+    vals = _project_fixed(pat, typeof(pat))
     return get!(cache, vals, T[])
 end
 
@@ -118,28 +123,6 @@ bin2int(v) = bin2int(v, Dim{length(v)}())
 @generated function bin2int(v, ::Dim{N}) where {N}
     w = reverse([2^(i - 1) for i in 1:N])
     return :(dot($w, v))
-end
-
-function _dropslices(t::P) where {P}
-    return Tuple(ti for ti in t if ti != Colon())
-end
-
-@generated function _dropslices_gen(pat::P) where {P}
-    ps = fieldtypes(P)
-    exs = []
-    for i in 1:length(ps)
-        if ps[i] != Colon
-            if i > 2 # Workaround for slurping of iterables (like strings) when passing to joinex
-                push!(exs, :(a2 = pat[$i],))
-            else
-                push!(exs, :(pat[$i],))
-            end
-        end
-    end
-    for i in 1:length(exs)-1
-        exs[i+1] = joinex(exs[i], exs[i+1])
-    end
-    return exs[end]
 end
 """
     _get_cache_index(::P)
@@ -209,4 +192,22 @@ function Base.firstindex(sa::IndexedVarArray, d)
 end
 function Base.lastindex(sa::IndexedVarArray, d)
     return last(sort(sa.index_names[d]))
+end
+
+# Override _view_matching_keys for IndexedVarArray parent: use index cache.
+function _view_matching_keys(
+    v::SparseArraySlice{P,V,NF,MT},
+) where {P<:IndexedVarArray,V,NF,MT}
+    return _select_cached(v.parent, v.mask)
+end
+
+# JuMP-efficient sum: build AffExpr directly via add_to_expression! for the
+# standard VariableRef type. Custom AbstractVariableRef subtypes fall back to
+# the generic slice sum implementation.
+function Base.sum(v::SparseArraySlice{<:IndexedVarArray,VariableRef})
+    result = zero(AffExpr)
+    for k in _view_matching_keys(v)
+        JuMP.add_to_expression!(result, v.parent[k])
+    end
+    return result
 end
